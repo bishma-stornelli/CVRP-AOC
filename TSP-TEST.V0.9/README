@@ -1,0 +1,187 @@
+
+######################################################
+###    simple LS and ILS algorithms for the TSP    ###
+######################################################
+
+      Version: 0.9
+      Author:  Thomas Stuetzle
+      Copyright (c) Thomas Stuetzle, 2004
+
+
+This is the README file to the implementation of a few local search
+algorithms for the TSP (2-opt and 3-opt variants) as well as some
+simple ILS algorithm.
+
+This software was developed by Thomas Stuetzle in connection
+with the Book 
+
+[HooStu04] Holger H. Hoos and Thomas Stuetzle, "Stochastic Local
+Search: Foundations and Applications", Morgan Kaufmann, San Francisco,
+CA, USA, 2004.
+
+This software is freely available subject to the GNU General Public
+Licence, which is included in file gpl.txt.
+
+If you use this code in your research, I would appreciate a citation
+in your publication(s). Please cite it as
+
+Thomas Stuetzle. TSP-TEST, Version 0.9. Available from
+http://www.sls-book.net, 2004.
+
+
+This software was developed for generating some examples of SLS
+performance in the TSP domain that were used in [HooStu04] (this code
+is a slightly modified version of the original code used for
+[HooStu04]). It is also intended to help readers of [HooStu04] to
+solve some of the hands-on exercises from the book. 
+
+In general, this software tries to provide a reasonably efficient
+implementation of local search algorithms for the TSP.
+
+
+=========
+CONTENTS
+=========
+
+
+The GNU General Public Licence:
+- gpl.txt
+
+The main control routine:
+- main.c
+
+Instance reading, distance computation, etc:
+- instances.c
+- instances.h
+
+Local search procedures and procedures for ILS:
+- ls.c
+- ls.h
+
+Additional useful / helping procedure:
+- utilities.c
+- utilities.h
+
+Time measurement:
+- timer.c (at the moment only unix / linux timing supported)
+- timer.h (at the moment only unix / linux timing supported)
+
+- Makefile
+
+- README
+
+Instances: 
+Sample TSP instances can be downloaded from TSPLIB at
+http://www.iwr.uni-heidelberg.de/groups/comopt/software/TSPLIB95/
+
+
+=====
+Code
+=====
+
+
+The software was developed in ANSI C under Linux, using the GNU 2.95.3
+gcc compiler and tested only in this environment. The software is
+distributed as a gzipped tar file.
+
+To install the code, first unzip the file by typing
+
+gunzip TSP-TEST.V0.9.tar.gz
+
+and then unpack it by typing 
+
+tar -xvf TSP-TEST.V0.9.tar
+
+The software will unpack in a new folder TSP-TEST.V0.9 
+
+To compile it under Linux just type 'make' and the executable
+'tsp-test' is produced.
+
+Note: The code is written in ANSI C. Hence, the code should be
+reasonable portable to other Operating Systems than Linux or Unix.
+
+
+======
+USAGE
+======
+
+
+In version V0.9, the main.c file has to be edited to change the
+behaviour of the code (e.g. changing the local search that is used,
+switching off ILS, using different stopping criteria etc.). This
+situation will be improved in Version V1.0, which will be soon
+available. 
+
+The code is preset in such a way that ILS is run using a 3-opt first
+improvement local search for 10 x n iterations, where n is the number
+of the cities in the TSP instance. 
+
+The code is run by typing
+
+./tsp-test <tsplibfile>
+
+An example for running the code is:
+
+./tsp-test lin318.tsp
+
+Note that for the moment only the distance measures EUC_2D, CEIL_2D,
+GEO, and ATT from TSPLIB are supported by the code.
+
+
+=======
+OUTPUT
+=======
+
+
+Every experiment produces two files. These files are 
+
+best.tsplibfilename
+cmp.tsplibfilename
+
+where tsplibfilename is the instance identifier of the instance under
+solution. 
+
+The most important of these is the file "cmp.tsplibfilename".
+ This file starts with
+
+begin problem tsplibfilename
+
+Then, for each trial statistical information on the development of the
+best-so-far solution is given. Each section for a trial starts with
+
+begin try <trial_number>
+
+Then, each time the algorithm finds a new best solution a line 
+
+best <number>	 time <number> iteration <number>
+
+is added, where "best" is the tour length of the best-so-far solution;
+time is the time at which a new best-so-far solution is found;
+iteration is the iteration number in which this solution is found;
+
+Each trial is ended by 
+
+end try <trial_number>
+
+Once all trials are run the line 
+
+end problem tsplibfilename
+
+is added to end the file. 
+
+The file  best.tsplibfilename
+
+collects the information about the best solution found in each trial,
+and some additional statistical information.
+
+
+Have fun, and if you have any comments please write to 
+
+stuetzle no@spam informatik.tu-darmstadt.de
+
+
+
+
+
+
+
