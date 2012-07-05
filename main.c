@@ -1,3 +1,19 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+#include <math.h>
+#include <limits.h>
+
+#include "TSP-TEST.V.09/instance.h"
+#include "TSP-TEST.V.09/utilities.h"
+#include "TSP-TEST.V.09/timer.h"
+#include "TSP-TEST.V.09/ls.h"
+
+int total_cities; // Numero total de ciudades
+int max_route_capacity; // Capacidad maxima de cada ruta
+int max_route_duration; // Duracion maxima de cada ruta
+int drop_time; 
+
 int main(){
   loadInstance();
   runAOC();
@@ -49,12 +65,14 @@ void runAOC(){
             // Si el componente es el deposito, acabo de terminar de construir
             // una ruta y puedo aplicarle el 3-opt
             // Falta verificar que el tamano de la ruta sea el minimo requerido para 3-opt
-            threeOpt(P[Psize], indexOfLastRoute , currentPosition);
+            int * tour = &(P[Psize][indexOfLastRoute]); // PUEDE HABER UN GRAN BUG EN ESTA LINEA
+            ncities = currentPosition - indexOfLastRoute; // Actualizo ncities para aplicar el three_opt_first
+            three_opt_first(tour);
+            Sduration += calculateTourDuration(tour) + ncities * dropTime;
             indexOfLastRoute = currentPosition;
-            ++Rnumber[Psize];
-            Sduration += distance[P[Psize][currentPosition - 1]][component];
             routeDuration = 0;
             routeCapacity = 0;
+            ++Rnumber[Psize];
           } else {
             // Si el componente no es el deposito, entonces ya cubri una ciudad
             // mas. Faltan numCities - citiesInS.
@@ -62,8 +80,7 @@ void runAOC(){
             if ( citiesInS == numCities ) {
               // Falta terminar la ruta, xq la siguiente iteracion no va a entrar
             }
-            // Actualizar duracion y capacidad de la ruta y de la solucion
-            Sduration += distance[P[Psize][currentPosition - 1]][component] + dropTime;
+            // Actualizar duracion y capacidad de la ruta y la duracion de la solucion
             routeDuration += distance[P[Psize][currentPosition - 1]][component] + dropTime;
             routeCapacity += demand[component];
           }
@@ -81,4 +98,31 @@ void runAOC(){
     // Actualizo feromonas
   } while( !terminar() );
   
+}
+
+void getFeasibleComponents(int * C, int * Csize, int * visited,
+                           int currentCustomer, int Rduration, int Rcapacity){
+  *Csize = 0;
+  // Veo a que ciudades puedo ir
+  int i ;
+  for( i = 1 ; i <= total_cities ; ++i){
+    if(!visited[i] &&
+      (Rduration + distMat[currentCustomer][i] + distMat[i][0] + drop_time <=  max_route_duration &&
+        Rcapacity + demandMat[i] <= max_route_capacity)){
+      // La ciudad a la que voy no se ha visitado, puedo agregarla a la ruta sin
+      // exceder la capacidad actual y ademas puedo ir y volver al deposito sin exceder la duracion
+      C[*Csize] = i;
+      *Csize += 1;
+    }
+  }
+  if (currentCustomer != 0){
+    // Si no estoy en el deposito, el deposito tambien puede ser factible
+    if (Rduration + distMat[currentCustomer][0] <=  max_route_duration) {
+      C[*Csize] = 0;
+      *Csize += 1;
+    } else {
+      printf("The last route built is unfeasible.");
+      exit(1);
+    }
+  }
 }
