@@ -1,6 +1,7 @@
 #ifndef CVRP_AOC_CVRP_INSTANCE_H_
 #define CVRP_AOC_CVRP_INSTANCE_H_
 
+
 // Matriz de distancias entre ciudades y el deposito
 extern int ** cvrp_distMat;
 

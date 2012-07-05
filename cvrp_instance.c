@@ -1,9 +1,29 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "TSP-TEST.V0.9/instance.h"
 
 #include "cvrp_instance.h"
-#include "TSP-TEST.V0.9/instance.h"
+
+int ** cvrp_distMat;
+
+// Numero de ciudades (no incluye el deposito)
+int cvrp_num_cities;
+
+// Arreglo de capacidades. En la posicion i esta la demanda de la ciudad i. Tamano: cvrp_num_cities + 1
+int * cvrp_demand;
+
+// Maxima duracion de la ruta
+int cvrp_max_route_duration;
+
+// Maxima capacidad de cada camion
+int cvrp_truck_capacity;
+
+// Tiempo para atender al cliente
+int cvrp_drop_time;
+
+// Carga la instancia a partir del archivo cvrp_file_name
+void cvrp_load_instance(char *cvrp_file_name);
 
 void cvrp_load_instance(char *cvrp_file_name) {
   
