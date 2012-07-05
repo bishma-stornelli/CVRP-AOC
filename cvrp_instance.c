@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "TSP-TEST.V0.9/instance.h"
+#include "TSP-TEST.V0.9/ls.h"
 
 #include "cvrp_instance.h"
 
@@ -35,7 +36,7 @@ void cvrp_load_instance(char *cvrp_file_name) {
   if ( cvrp_file == NULL ) {
     fprintf(stderr,"No instance file specified, abort\n");
   }
-  /*assert(tsp_file != NULL);*/
+  // assert(tsp_file != NULL);
   printf("\nconverting %s to tsp_file_name ... \n\n", cvrp_file_name);
   
   fprintf(tsp_file, "NAME : %s\n",cvrp_file_name);
@@ -56,10 +57,12 @@ void cvrp_load_instance(char *cvrp_file_name) {
   fscanf(cvrp_file,"%s", buf);
   cvrp_drop_time = atoi(buf);
   
+  /*
   printf("cvrp_num_cities: %d\n",cvrp_num_cities);
   printf("cvrp_max_route_duration: %d\n",cvrp_max_route_duration);
   printf("cvrp_truck_capacity: %d\n",cvrp_truck_capacity);
   printf("cvrp_drop_time: %d\n",cvrp_drop_time);
+  */
   
   int counter = 0;
   
@@ -85,4 +88,10 @@ void cvrp_load_instance(char *cvrp_file_name) {
   fprintf(tsp_file, "EOF\n");
   fclose(tsp_file);
   fclose(cvrp_file);
+  
+  read_instance("tsp_file_name");
+  distMat = compute_distances();
+  nn_ls = MIN (ncities - 1, 40);
+  nnMat = compute_NNLists();
+  
 }
