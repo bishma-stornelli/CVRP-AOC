@@ -1,6 +1,6 @@
 
 test: main.o TSP-TEST.V0.9/instance.o TSP-TEST.V0.9/utilities.o TSP-TEST.V0.9/timer.o TSP-TEST.V0.9/ls.o
-	gcc -O main.o TSP-TEST.V0.9/timer.o TSP-TEST.V0.9/instance.o TSP-TEST.V0.9/utilities.o TSP-TEST.V0.9/ls.o -o stsp -lm -ansi -Wall
+	gcc -O main.o TSP-TEST.V0.9/timer.o TSP-TEST.V0.9/instance.o TSP-TEST.V0.9/utilities.o TSP-TEST.V0.9/ls.o -o cvrp -lm -ansi -Wall
 
 main.o: main.c
 	gcc -O -c main.c -o main.o -ansi -Wall

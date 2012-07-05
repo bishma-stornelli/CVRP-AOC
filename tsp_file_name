@@ -1,6 +1,6 @@
-NAME : ./instanciasCVRP/vrpnc1.txt
+NAME : instanciasCVRP/vrpnc1.txt
 TYPE : TSP
-COMMENT : ./instanciasCVRP/vrpnc1.txt (S.Eilon, C.D.T.Watson-Gandy and N.Christofides)
+COMMENT : instanciasCVRP/vrpnc1.txt (S.Eilon, C.D.T.Watson-Gandy and N.Christofides)
 DIMENSION : 51
 EDGE_WEIGHT_TYPE : EUC_2D
 NODE_COORD_SECTION

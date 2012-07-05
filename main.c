@@ -1,5 +1,11 @@
 #include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
 #include <math.h>
+#include <limits.h>
+#include <string.h>
+#include <unistd.h>
+
 #include "TSP-TEST.V0.9/instance.h"
 #include "TSP-TEST.V0.9/utilities.h"
 #include "TSP-TEST.V0.9/timer.h"
@@ -28,9 +34,8 @@ void loadInstance(char *cvrp_file_name) {
   fprintf(tsp_file, "COMMENT : %s (S.Eilon, C.D.T.Watson-Gandy and N.Christofides)\n",cvrp_file_name);
   fscanf(cvrp_file,"%s", buf);
   int numCities = atoi(buf);
-  demand = (int*) malloc( (numCities+1) * sizeof(int));
+  demand = malloc( (numCities+1) * sizeof(int));
   memset(demand, 0, (numCities + 1));
-
   fprintf(tsp_file, "DIMENSION : %d\n",numCities+1);
   fprintf(tsp_file, "EDGE_WEIGHT_TYPE : EUC_2D\n");
   fprintf(tsp_file, "NODE_COORD_SECTION\n");
@@ -41,10 +46,12 @@ void loadInstance(char *cvrp_file_name) {
   fscanf(cvrp_file,"%s", buf);
   dropTime = atoi(buf);
  
+  /*
   printf("numCities: %d\n",numCities);
   printf("maximumRouteTime: %d\n",maximumRouteTime);
   printf("vehicleCapacity: %d\n",vehicleCapacity);
   printf("dropTime: %d\n",dropTime);
+  */
   
   int counter = 0;
   
@@ -66,12 +73,18 @@ void loadInstance(char *cvrp_file_name) {
     demand[counter] = atoi(buf);
         
     counter++;
+    
   }
+  
   fprintf(tsp_file, "EOF\n");
   fclose(tsp_file);
   fclose(cvrp_file);
- 
-}
+  
+  read_instance("tsp_file_name");
+  distMat = compute_distances();
+  nn_ls = MIN (ncities - 1, 40);
+  nnMat = compute_NNLists();
+} 
 
 /*
 void runAOC(){
@@ -157,4 +170,5 @@ int main(int argc, char **argv) {
   loadInstance(argv[1]);
   /*runAOC();
     printResults();*/
+  return 0;
 }
