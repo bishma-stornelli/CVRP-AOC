@@ -39,4 +39,6 @@ extern double aoc_evaporation_rate;
 // declaradas en el archivo cvrp_instance.h
 extern void run_aoc_metaheuristic();
 
+extern void print_results();
+
 #endif

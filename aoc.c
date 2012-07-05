@@ -186,7 +186,7 @@ double timeval_diff(struct timeval *a, struct timeval *b)
 // returns 1 if its time to finish or 0 in other case
 int terminar(){
   ++aoc_total_iterations;
-  if (aoc_total_iterations == 1000)
+  if (aoc_total_iterations == 100)
     return 1;
   return 0;
 }
@@ -317,4 +317,24 @@ void run_aoc_metaheuristic(){
   gettimeofday(&t_fin, 0);
   aoc_time_best_found = timeval_diff(&t_best, &t_ini);
   aoc_total_time = timeval_diff(&t_fin, &t_ini);
+}
+
+void print_results(){
+  printf("Cost: %d\n", aoc_best_duration - cvrp_num_cities * cvrp_drop_time);
+  printf("Cost with drop time: %d\n", aoc_best_duration);
+  printf("Iteration until best found: %d\n", aoc_iteration_best_found);
+  printf("Total iterations: %d\n", aoc_total_iterations);
+  printf("Time until best found: %d\n", aoc_time_best_found);
+  printf("Total time elapsed: %d\n", aoc_total_time);
+  printf("Routes:\n");
+  int i,j;
+  for (i = 0 ; i < 2 * cvrp_num_cities ; ++i ){
+    printf("%d " , aoc_best[i]);
+    if (aoc_best[i] == 0 && aoc_best[i + 1] == 0){
+      printf("\n");
+      break;
+    }
+    if( i > 0 && aoc_best[i] == 0 )
+      printf("\n%d ", 0);
+  }
 }
