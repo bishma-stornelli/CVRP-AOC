@@ -13,7 +13,7 @@
 
 int main(int argc, char **argv) {
   cvrp_load_instance(argv[1]);
-/* runAOC();*/
-/* printResults();*/
+//runAOC();
+//printResults();
   return 0;
 }
