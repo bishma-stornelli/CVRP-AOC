@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <limits.h>
+#include <sys/time.h>
 
 #include "TSP-TEST.V0.9/utilities.h"
 
@@ -19,7 +20,7 @@ double aoc_time_best_found;
 double aoc_total_time;
 
 // Tamano de la poblacion que va a construir en cada iteracion
-int aoc_total_ants;
+int aoc_total_ants = 5;
 
 // Arreglo que contiene la mejor solucion encontrada
 // Por ejemplo 0 2 4 0 1 0 3 5 0 0 0 es la representacion de una solucion
@@ -131,10 +132,15 @@ void Quicksort(const double **pheromones, int current_customer, int* v, int b, i
 }
 
 int getComponent(int * components, int components_size, int current_customer, const double ** pheromones){
+  printf("Empezando a aplicar quicksort en los componentes: "); imprimir_arreglo(components, components_size);
   // Aplico quicksort para ordenar los componentes
   Quicksort(pheromones, current_customer, components, 0 , components_size - 1);
+  printf("Luego del quicksort los componentes quedaron asi: "); imprimir_arreglo(components, components_size);
   // Una vez arreglado elijo uno aleatorio de entre los primeros
-  return components[ random_number(seed) % (int)(aoc_component_selection_rate * components_size) ];
+  int temp = random_number(&seed) % (int)(1 + aoc_component_selection_rate * components_size);
+  printf("seed: %d\n", seed);
+  printf("random_number: %d\n", temp);
+  return components[ temp ];
 }
 
 // Evapora cada feromona en (1 - aoc_evaporation_rate)
@@ -164,27 +170,64 @@ void updatePheromones(const int ** P, const int * durations, double ** pheromone
   }
 }
 
-int * copy(int * from, int * to){
+void copy(int * from, int * to){
   int i;
   for ( i = 0 ; i < 2 * cvrp_num_cities + 1 ; ++i )
     to[i] = from[i];
+}
+
+double timeval_diff(struct timeval *a, struct timeval *b)
+{
+  return
+  (double)(a->tv_sec + (double)a->tv_usec/1000000) -
+  (double)(b->tv_sec + (double)b->tv_usec/1000000);
+}
+
+// returns 1 if its time to finish or 0 in other case
+int terminar(){
+  ++aoc_total_iterations;
+  if (aoc_total_iterations == 1000)
+    return 1;
+  return 0;
+}
+
+void imprimir_matriz_reales(double **v, int n , int m){
+  int i , j ;
+  for ( i = 0 ; i < n ; printf("\n"), ++i)
+    for( j = 0 ; j < m ; printf("%f ", v[i][j]) , ++j);
+}
+
+void imprimir_matriz(int **v, int n , int m){
+  int i;
+  for ( i = 0 ; i < n ; ++i)
+    imprimir_arreglo(v[i], m);
+}
+
+void imprimir_arreglo(int *v, int n ){
+  int i;
+  for ( i = 0 ; i < n ; printf("%d " , v[i] ) , ++i);
+  printf("\n");
 }
 
 void run_aoc_metaheuristic(){
   
   
   // Inicializo variables locales
+  struct timeval t_ini, t_fin, t_best;
+  // Taking the initial time
+  gettimeofday(&t_ini, 0);
+  
   int max_solution_size = (2 * cvrp_num_cities + 1 ) * sizeof(int);
   // Psize contiene el numero de soluciones construidas para cada iteracion
   int Psize = 0;
   //   P contiene todas las soluciones que van a ser construidas
-  int ** P = (int**) malloc( aoc_total_ants * sizeof(int));
+  int ** P = (int**) malloc( aoc_total_ants * sizeof(int*));
   // Auxiliar para iteraciones cortass
-  int i;
+  int i,j;
   for(i = 0 ; i < aoc_total_ants ; ++i)
     P[i] = (int*) malloc( max_solution_size );
   //  Route number: mantiene el numero de rutas para cada solucion P[i]
-  int * Rnumber = (int*) malloc( aoc_total_ants * sizeof(int));
+//   int * Rnumber = (int*) malloc( aoc_total_ants * sizeof(int));
   //  Durations: duracion de cada solucion
   int * durations = (int*) malloc( aoc_total_ants * sizeof(int));
   // C contiene el conjunto de componentes disponibles para cada iteracion mas interna
@@ -193,17 +236,23 @@ void run_aoc_metaheuristic(){
   // visited contiene 1 si la ciudad visited[i] fue visitada o 0 en caso contrario
   int * visited = (int*) malloc(( 1 + cvrp_num_cities) * sizeof(int));
   // matriz de feromonas
-  double ** pheromones = (double**) malloc((1 + cvrp_num_cities) * sizeof(double*));
-  for(i = 0 ; i < aoc_total_ants ; calloc( &(pheromones[i]),(1 + cvrp_num_cities) * sizeof(double)), ++i);
+  double ** pheromones = (double**) malloc( (1 + cvrp_num_cities) * sizeof(double*));
+  for(i = 0 ; i <= cvrp_num_cities ; ++i) pheromones[i] = (double*) calloc( 1 + cvrp_num_cities, sizeof(double));
+
+  printf("La matriz de feromonas es: \n");
+  imprimir_matriz_reales(pheromones,1+cvrp_num_cities, 1 + cvrp_num_cities );
 
   // Inicializo variables globales
   aoc_best = (int*) malloc( max_solution_size );
   aoc_best_size = 0;
   aoc_best_duration = INT_MAX;
+  aoc_iteration_best_found = 0;
+  aoc_total_iterations = 0;
+
   
   do {
     // Inicializo todo para construir todo de nuevo
-    memset(Rnumber, 0, aoc_total_ants * sizeof(int));
+//     memset(Rnumber, 0, aoc_total_ants * sizeof(int));
     memset(durations, 0, aoc_total_ants * sizeof(int));
     Psize = 0;
     while (Psize < aoc_total_ants){
@@ -211,10 +260,13 @@ void run_aoc_metaheuristic(){
       int Sduration = 0, Rduration = 0 , Rdemand = 0;
       P[Psize][0] = 0; // La solucion empieza en el deposito
       memset(visited, 0 , ( 1 + cvrp_num_cities) * sizeof(int));
+      
       while (1){
+        printf("La solucion %d construida hasta ahora es: ", Psize); imprimir_arreglo(P[Psize], currentPosition);
         // Deberia considerar no solo el arco de llegada al nuevo componente sino tambien el regreso al deposito
         // Y ademas no deberia regresar 0 si la posicion actual es 0 (el deposito)
         getFeasibleComponents(visited, P[Psize][currentPosition - 1], Rduration, Rdemand, C, &Csize);
+        printf("Los componentes factibles son: "); imprimir_arreglo( C, Csize);
         if (Csize == 0){
           // Si no hay componentes factibles es porque ya se acabo de construir la solucion
           if ( currentPosition < max_solution_size ){
@@ -223,7 +275,10 @@ void run_aoc_metaheuristic(){
           break;
         } else {
           int component = getComponent(C, Csize, P[Psize][currentPosition - 1], pheromones);
+          printf("El componente elegido es: %d\n", component); 
+          
           P[Psize][currentPosition] = component;
+          visited[component] = 1;
           
           if( component == 0 ){
             // Si el componente es el deposito, acabo de terminar de construir
@@ -237,7 +292,7 @@ void run_aoc_metaheuristic(){
             indexOfLastRoute = currentPosition;
             Rduration = 0;
             Rdemand = 0;
-            ++Rnumber[Psize];
+//             ++Rnumber[Psize];
           } else {
             // Actualizar duracion y capacidad de la ruta y la duracion de la solucion
             Rduration += cvrp_distMat[P[Psize][currentPosition - 1]][component] + cvrp_drop_time;
@@ -248,6 +303,8 @@ void run_aoc_metaheuristic(){
       }
       durations[Psize] = Sduration;
       if ( durations[Psize] < aoc_best_duration ){
+        gettimeofday(&t_best, 0);
+        aoc_iteration_best_found = aoc_total_iterations;
         copy(P[Psize], aoc_best);
         aoc_best_duration = durations[Psize];
       }
@@ -255,6 +312,8 @@ void run_aoc_metaheuristic(){
     }
     evaporatePheromones(pheromones);
     updatePheromones(P,durations, pheromones);
-  } while( 1 );
-  
+  } while( !terminar() );
+  gettimeofday(&t_fin, 0);
+  aoc_time_best_found = timeval_diff(&t_best, &t_ini);
+  aoc_total_time = timeval_diff(&t_fin, &t_ini);
 }

@@ -93,5 +93,5 @@ void cvrp_load_instance(char *cvrp_file_name) {
   distMat = compute_distances();
   nn_ls = MIN (ncities - 1, 40);
   nnMat = compute_NNLists();
-  
+  cvrp_distMat = distMat;
 }
