@@ -1,4 +1,4 @@
-CC=cc
+CC=gcc
 OPTIONS=-Wall -Wextra
 OBJECTS=aoc.o cvrp_instance.o
 
@@ -22,3 +22,6 @@ TSP-TEST.V0.9/ls.o: TSP-TEST.V0.9/ls.h TSP-TEST.V0.9/ls.c
 
 %.o: %.c %.h
 	$(CC) $(OPTIONS) -c $<
+
+clean:
+	rm *.o cvrp
