@@ -1,24 +1,77 @@
 #include <stdio.h>
-#include <stdlib.h>
-#include <time.h>
 #include <math.h>
-#include <limits.h>
+#include "TSP-TEST.V0.9/instance.h"
+#include "TSP-TEST.V0.9/utilities.h"
+#include "TSP-TEST.V0.9/timer.h"
+#include "TSP-TEST.V0.9/ls.h"
+ 
+int maximumRouteTime;
+int vehicleCapacity;
+int dropTime;
+int * demand; 
+ 
+void loadInstance(char *cvrp_file_name) {
+ 
+  FILE *tsp_file;
+  FILE *cvrp_file;
+  char buf[LINE_BUF_LEN];
+  tsp_file  = fopen("tsp_file_name",  "w");
+  cvrp_file = fopen(cvrp_file_name, "r");
+  if ( cvrp_file == NULL ) {
+    fprintf(stderr,"No instance file specified, abort\n");
+  }
+  /*assert(tsp_file != NULL);*/
+  printf("\nconverting %s to tsp_file_name ... \n\n", cvrp_file_name);
+  
+  fprintf(tsp_file, "NAME : %s\n",cvrp_file_name);
+  fprintf(tsp_file, "TYPE : TSP\n");
+  fprintf(tsp_file, "COMMENT : %s (S.Eilon, C.D.T.Watson-Gandy and N.Christofides)\n",cvrp_file_name);
+  fscanf(cvrp_file,"%s", buf);
+  int numCities = atoi(buf);
+  demand = (int*) malloc( (numCities+1) * sizeof(int));
+  memset(demand, 0, (numCities + 1));
 
-#include "TSP-TEST.V.09/instance.h"
-#include "TSP-TEST.V.09/utilities.h"
-#include "TSP-TEST.V.09/timer.h"
-#include "TSP-TEST.V.09/ls.h"
-
-int total_cities; // Numero total de ciudades
-int max_route_capacity; // Capacidad maxima de cada ruta
-int max_route_duration; // Duracion maxima de cada ruta
-int drop_time; 
-
-int main(){
-  loadInstance();
-  runAOC();
-  printResults();
+  fprintf(tsp_file, "DIMENSION : %d\n",numCities+1);
+  fprintf(tsp_file, "EDGE_WEIGHT_TYPE : EUC_2D\n");
+  fprintf(tsp_file, "NODE_COORD_SECTION\n");
+  fscanf(cvrp_file,"%s", buf);
+  maximumRouteTime = atoi(buf);
+  fscanf(cvrp_file,"%s", buf);
+  vehicleCapacity = atoi(buf);
+  fscanf(cvrp_file,"%s", buf);
+  dropTime = atoi(buf);
+ 
+  printf("numCities: %d\n",numCities);
+  printf("maximumRouteTime: %d\n",maximumRouteTime);
+  printf("vehicleCapacity: %d\n",vehicleCapacity);
+  printf("dropTime: %d\n",dropTime);
+  
+  int counter = 0;
+  
+  fprintf(tsp_file, "%d ",counter);
+  fscanf(cvrp_file,"%s", buf);
+  fprintf(tsp_file, "%s ", buf);
+  fscanf(cvrp_file,"%s", buf);
+  fprintf(tsp_file, "%s\n", buf);
+  
+  counter++;
+  
+  while(fscanf(cvrp_file,"%s", buf) != EOF) {
+    
+    fprintf(tsp_file, "%d ",counter);
+    fprintf(tsp_file, "%s ",buf);
+    fscanf(cvrp_file,"%s", buf);
+    fprintf(tsp_file, "%s\n",buf);
+    fscanf(cvrp_file,"%s", buf);
+    demand[counter] = atoi(buf);
+        
+    counter++;
+  }
+  fprintf(tsp_file, "EOF\n");
+  fclose(tsp_file);
+  fclose(cvrp_file);
 }
+
 
 void runAOC(){
   int maxPossibleSize = (2 * numCities + 1 ) * sizeof(int);
@@ -125,4 +178,10 @@ void getFeasibleComponents(int * C, int * Csize, int * visited,
       exit(1);
     }
   }
+}
+
+int main(int argc, char **argv) {
+  loadInstance(argv[1]);
+  runAOC();
+  printResults();
 }
