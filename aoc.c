@@ -2,8 +2,11 @@
 #include <stdlib.h>
 #include <limits.h>
 #include <sys/time.h>
+#include <string.h>
+#include <unistd.h>
 
 #include "TSP-TEST.V0.9/utilities.h"
+#include "TSP-TEST.V0.9/instance.h"
 
 #include "aoc.h"
 #include "cvrp_instance.h"
@@ -55,6 +58,7 @@ void evaporatePheromones(double **pheromones);
 // en g(i) donde g(.) es una funcion tal que durations(x) < durations(y) => g(x) > g(y)
 void updatePheromones(const int ** P, const int * durations, double ** pheromones);
 
+void imprimir_arreglo(int *v, int n );
 
 /** Funcion auxiliar que construye una lista de componentes factibles a partir
 * de los parametros recibidos.
@@ -138,7 +142,7 @@ int getComponent(int * components, int components_size, int current_customer, co
   printf("Luego del quicksort los componentes quedaron asi: "); imprimir_arreglo(components, components_size);
   // Una vez arreglado elijo uno aleatorio de entre los primeros
   int temp = random_number(&seed) % (int)(1 + aoc_component_selection_rate * components_size);
-  printf("seed: %d\n", seed);
+  printf("seed: %ld\n", seed);
   printf("random_number: %d\n", temp);
   return components[ temp ];
 }
@@ -288,6 +292,7 @@ void run_aoc_metaheuristic(){
             ncities = currentPosition - indexOfLastRoute; // Actualizo ncities para aplicar el three_opt_first
             three_opt_first(tour);
             Sduration += calculateTourDuration(tour) + ncities * dropTime;*/
+	    Rduration += cvrp_distMat[P[Psize][currentPosition - 1]][component];
             Sduration += Rduration;
             indexOfLastRoute = currentPosition;
             Rduration = 0;
@@ -324,8 +329,8 @@ void print_results(){
   printf("Cost with drop time: %d\n", aoc_best_duration);
   printf("Iteration until best found: %d\n", aoc_iteration_best_found);
   printf("Total iterations: %d\n", aoc_total_iterations);
-  printf("Time until best found: %d\n", aoc_time_best_found);
-  printf("Total time elapsed: %d\n", aoc_total_time);
+  printf("Time until best found: %f\n", aoc_time_best_found);
+  printf("Total time elapsed: %f\n", aoc_total_time);
   printf("Routes:\n");
   int i,j;
   for (i = 0 ; i < 2 * cvrp_num_cities ; ++i ){
@@ -337,4 +342,49 @@ void print_results(){
     if( i > 0 && aoc_best[i] == 0 )
       printf("\n%d ", 0);
   }
+  verified_solution();
+}
+
+void verified_solution() {
+  
+  int totalDuration = 0;
+  int routeDuration = 0;
+  int routeDemand = 0;
+  int routeNum = 1;
+  int edgeCost = 0;
+  int numClient = 1;
+  int i;
+  
+  for(i = 0; i < 2*cvrp_num_cities; ++i) {
+    
+    if (aoc_best[i] == 0 && aoc_best[i + 1] == 0) {
+      break;
+    }
+    edgeCost = cvrp_distMat[aoc_best[i]][aoc_best[i + 1]];
+    routeDuration += edgeCost;
+    totalDuration += edgeCost;
+    if(aoc_best[i] != 0) {
+      ++numClient;
+      routeDuration += cvrp_drop_time;
+      routeDemand += cvrp_demand[i];
+    }
+    
+    if(aoc_best[i+1] == 0) {
+      printf("the duration for route %d is %d\n",routeNum,routeDuration);
+      printf("the demand for route %d is %d\n",routeNum,routeDemand);
+      if(routeDuration > cvrp_max_route_duration)
+	printf("the route exceeds the max route duration\n");
+      if(routeDemand > cvrp_truck_capacity)
+	printf("the route exceeds the max truck capacity\n");
+      routeDuration = 0;
+      routeDemand = 0;
+      ++routeNum;
+    }
+
+  }
+  
+  if(totalDuration != aoc_best_duration) {
+    printf("the tour duration doesnt correspond to the compute duration\n");
+  }
+    
 }
