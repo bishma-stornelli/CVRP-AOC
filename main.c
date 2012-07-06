@@ -28,7 +28,7 @@ void print_instance(){
 
 int main(int argc, char **argv) {
   cvrp_load_instance(argv[1]);
-  print_instance();
+//   print_instance();
   run_aoc_metaheuristic();
   print_results();
   return 0;

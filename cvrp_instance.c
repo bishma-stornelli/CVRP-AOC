@@ -1,8 +1,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/time.h>
 #include "TSP-TEST.V0.9/instance.h"
 #include "TSP-TEST.V0.9/ls.h"
+#include "TSP-TEST.V0.9/utilities.h"
 
 #include "cvrp_instance.h"
 
@@ -94,4 +96,8 @@ void cvrp_load_instance(char *cvrp_file_name) {
   nn_ls = MIN (ncities - 1, 40);
   nnMat = compute_NNLists();
   cvrp_distMat = distMat;
+  struct timeval a;
+  gettimeofday(&a, 0);
+  seed = (long)a.tv_usec;
+  printf("Semilla inicializada en: %d\n" , seed);
 }

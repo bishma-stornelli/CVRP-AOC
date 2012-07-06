@@ -37,9 +37,9 @@ int aoc_best_size;
 // Duracion de la mejor solucion
 int aoc_best_duration;
 
-double aoc_evaporation_rate;
+double aoc_evaporation_rate = 0.05;
 
-double aoc_component_selection_rate = 0.1;
+double aoc_component_selection_rate = 1.0;
 
 // Corre la metaheuristica usando como informacion de entrada las variables
 // declaradas en el archivo cvrp_instance.h
@@ -136,14 +136,14 @@ void Quicksort(const double **pheromones, int current_customer, int* v, int b, i
 }
 
 int getComponent(int * components, int components_size, int current_customer, const double ** pheromones){
-  printf("Empezando a aplicar quicksort en los componentes: "); imprimir_arreglo(components, components_size);
+//   printf("Empezando a aplicar quicksort en los componentes: "); imprimir_arreglo(components, components_size);
   // Aplico quicksort para ordenar los componentes
   Quicksort(pheromones, current_customer, components, 0 , components_size - 1);
-  printf("Luego del quicksort los componentes quedaron asi: "); imprimir_arreglo(components, components_size);
+//   printf("Luego del quicksort los componentes quedaron asi: "); imprimir_arreglo(components, components_size);
   // Una vez arreglado elijo uno aleatorio de entre los primeros
   int temp = random_number(&seed) % (int)(1 + aoc_component_selection_rate * components_size);
-  printf("seed: %ld\n", seed);
-  printf("random_number: %d\n", temp);
+//   printf("seed: %ld\n", seed);
+//   printf("random_number: %d\n", temp);
   return components[ temp ];
 }
 
@@ -244,8 +244,8 @@ void run_aoc_metaheuristic(){
   double ** pheromones = (double**) malloc( (1 + cvrp_num_cities) * sizeof(double*));
   for(i = 0 ; i <= cvrp_num_cities ; ++i) pheromones[i] = (double*) calloc( 1 + cvrp_num_cities, sizeof(double));
 
-  printf("La matriz de feromonas es: \n");
-  imprimir_matriz_reales(pheromones,1+cvrp_num_cities, 1 + cvrp_num_cities );
+//   printf("La matriz de feromonas es: \n");
+//   imprimir_matriz_reales(pheromones,1+cvrp_num_cities, 1 + cvrp_num_cities );
 
   // Inicializo variables globales
   aoc_best = (int*) malloc( max_solution_size );
@@ -266,11 +266,11 @@ void run_aoc_metaheuristic(){
       memset(visited, 0 , ( 1 + cvrp_num_cities) * sizeof(int));
       
       while (1){
-        printf("La solucion %d construida hasta ahora es: ", Psize); imprimir_arreglo(P[Psize], currentPosition);
+//         printf("La solucion %d construida hasta ahora es: ", Psize); imprimir_arreglo(P[Psize], currentPosition);
         // Deberia considerar no solo el arco de llegada al nuevo componente sino tambien el regreso al deposito
         // Y ademas no deberia regresar 0 si la posicion actual es 0 (el deposito)
         getFeasibleComponents(visited, P[Psize][currentPosition - 1], Rduration, Rdemand, C, &Csize);
-        printf("Los componentes factibles son: "); imprimir_arreglo( C, Csize);
+//         printf("Los componentes factibles son: "); imprimir_arreglo( C, Csize);
         if (Csize == 0){
           // Si no hay componentes factibles es porque ya se acabo de construir la solucion
           if ( currentPosition < max_solution_size ){
@@ -279,7 +279,7 @@ void run_aoc_metaheuristic(){
           break;
         } else {
           int component = getComponent(C, Csize, P[Psize][currentPosition - 1], pheromones);
-          printf("El componente elegido es: %d\n", component); 
+//           printf("El componente elegido es: %d\n", component); 
           
           P[Psize][currentPosition] = component;
           visited[component] = 1;
@@ -292,7 +292,7 @@ void run_aoc_metaheuristic(){
             ncities = currentPosition - indexOfLastRoute; // Actualizo ncities para aplicar el three_opt_first
             three_opt_first(tour);
             Sduration += calculateTourDuration(tour) + ncities * dropTime;*/
-	    Rduration += cvrp_distMat[P[Psize][currentPosition - 1]][component];
+            Rduration += cvrp_distMat[P[Psize][currentPosition - 1]][component];
             Sduration += Rduration;
             indexOfLastRoute = currentPosition;
             Rduration = 0;
@@ -312,11 +312,14 @@ void run_aoc_metaheuristic(){
         aoc_iteration_best_found = aoc_total_iterations;
         copy(P[Psize], aoc_best);
         aoc_best_duration = durations[Psize];
+        printf("Mejor solucion encontrada. Duracion: %d\n", aoc_best_duration);
       }
       ++Psize;
     }
     evaporatePheromones(pheromones);
     updatePheromones(P,durations, pheromones);
+//     printf("############## FEROMONAS ####################\n");
+//     imprimir_matriz_reales(pheromones,1+cvrp_num_cities, 1 + cvrp_num_cities );
     ++aoc_total_iterations;
   } while( !terminar() );
   gettimeofday(&t_fin, 0);
