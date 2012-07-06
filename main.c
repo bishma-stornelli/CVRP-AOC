@@ -24,11 +24,14 @@ void print_instance(){
   printf("cvrp_demand: \n");
   for (i = 0 ; i <= cvrp_num_cities ; printf("%d ", cvrp_demand[i]), ++i);
   printf("\n");
+  printf("seed: %d\n", seed);
 }
 
 int main(int argc, char **argv) {
   cvrp_load_instance(argv[1]);
 //   print_instance();
+  initialize_aoc(argv, argc);
+//   print_aoc();
   run_aoc_metaheuristic();
   print_results();
   return 0;

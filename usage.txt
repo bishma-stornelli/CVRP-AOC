@@ -1,0 +1,21 @@
+Opciones:
+
+  -a <total_ants>
+    Especifica el numero total de soluciones que se construyen por iteracion.
+    El numero por defecto es igual al numero de ciudades.
+
+  -c <component_selection_rate>
+    Especifica cuantos componentes van a seleccionarse del total de componentes factibles.
+    El numero debe estar en (0.0 , 1.0]. Valor por defecto: 0.3
+
+  -e <evaporation_rate>
+    Especifica el factor de evaporacion de las feromonas.
+    Debe estar entre [0.0, 1.0]. Por defecto: 0.2
+
+  -t <finish_function> <finish_param>
+    Especifica la funcion para terminar la metaheuristicas. Los posibles valores son:
+      improvement en cuyo caso finish_param es el numero de iteraciones que pasan sin mejorar la solucion
+      fixed en cuyo caso finish_param especifica el numero de iteraciones maximas
+      time en cuyo caso finish_param es el numero de segundos maximo que debe correr la solucion
+    Cuando no se especifica, la funcion usada por defecto es por tiempo con 60 segundos.
+

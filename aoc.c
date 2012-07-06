@@ -11,6 +11,26 @@
 #include "aoc.h"
 #include "cvrp_instance.h"
 
+double aoc_evaporation_rate = -1;
+
+// Porcentaje que determina cuantos de los componentes disponibles van a ser
+// seleccionados para elegir aleatoriamente el componente final.
+double aoc_component_selection_rate = -1;
+
+// Tamano de la poblacion que va a construir en cada iteracion
+int aoc_total_ants = -1;
+
+// Iteracion en la que se encontro la mejor solucion
+int aoc_iteration_best_found;
+
+int finish_param = -1;
+
+// Numero de iteraciones totales
+int aoc_total_iterations = 0;
+
+// Apuntador a funcion usada para terminar
+int (*finish_function)() = NULL;
+
 int aoc_iteration_best_found;
 
 // Numero de iteraciones totales
@@ -21,9 +41,6 @@ double aoc_time_best_found;
 
 // Segundos totales que duro corriendo el algoritmo
 double aoc_total_time;
-
-// Tamano de la poblacion que va a construir en cada iteracion
-int aoc_total_ants;
 
 // Arreglo que contiene la mejor solucion encontrada
 // Por ejemplo 0 2 4 0 1 0 3 5 0 0 0 es la representacion de una solucion
@@ -37,10 +54,7 @@ int aoc_best_size;
 // Duracion de la mejor solucion
 int aoc_best_duration;
 
-double aoc_evaporation_rate = 0.05;
-
-double aoc_component_selection_rate = 1.0;
-
+struct timeval t_ini, t_fin, t_best;
 // Corre la metaheuristica usando como informacion de entrada las variables
 // declaradas en el archivo cvrp_instance.h
 void run_aoc_metaheuristic();
@@ -60,6 +74,12 @@ void updatePheromones(const int ** P, const int * durations, double ** pheromone
 
 void imprimir_arreglo(int *v, int n );
 
+int finish_not_improvement();
+// Terminar luego de un # fijo de iteraciones. Requiere el numero maximo de iteraciones
+int finish_fixed_iterations();
+// Terminar luego de cierto tiempo. Requiere el tiempo maximo
+int finish_time();
+
 /** Funcion auxiliar que construye una lista de componentes factibles a partir
 * de los parametros recibidos.
 *
@@ -77,12 +97,17 @@ void getFeasibleComponents(const int * visited, int currentCustomer, int Rdurati
   int i ;
   for( i = 1 ; i <= cvrp_num_cities ; ++i){
     if(!visited[i] &&
-      (Rduration + cvrp_distMat[currentCustomer][i] + cvrp_distMat[i][0] + cvrp_drop_time <=  cvrp_max_route_duration &&
-      Rdemand + cvrp_demand[i] <= cvrp_truck_capacity)){
+      ( Rduration + // La duracion actual
+        cvrp_distMat[currentCustomer][i] + // Mas llegar al siguiente
+        (currentCustomer != 0 ? cvrp_distMat[i][0] + cvrp_drop_time : 0 ) // Mas regresar al deposito si el actual no es el deposito
+        <=  cvrp_max_route_duration  // Es menor que la duracion maxima
+        && (Rdemand + cvrp_demand[i] <= cvrp_truck_capacity)) // Verifico que no exceda la capacidad
+
+      ){
       // La ciudad a la que voy no se ha visitado, puedo agregarla a la ruta sin
       // exceder la capacidad actual y ademas puedo ir y volver al deposito sin exceder la duracion
       C[*Csize] = i;
-    *Csize += 1;
+      *Csize += 1;
     }
   }
   if (currentCustomer != 0){
@@ -90,7 +115,8 @@ void getFeasibleComponents(const int * visited, int currentCustomer, int Rdurati
     if (Rduration + cvrp_distMat[currentCustomer][0] <=  cvrp_max_route_duration) {
       C[*Csize] = 0;
       *Csize += 1;
-    } else {
+    }
+    else {
       printf("The last route built is unfeasible.");
       exit(1);
     }
@@ -217,11 +243,9 @@ void run_aoc_metaheuristic(){
   
   
   // Inicializo variables locales
-  struct timeval t_ini, t_fin, t_best;
+  
   // Taking the initial time
   gettimeofday(&t_ini, 0);
-  
-  aoc_total_ants = cvrp_num_cities;
   int max_solution_size = (2 * cvrp_num_cities + 1 ) * sizeof(int);
   // Psize contiene el numero de soluciones construidas para cada iteracion
   int Psize = 0;
@@ -246,13 +270,6 @@ void run_aoc_metaheuristic(){
 
 //   printf("La matriz de feromonas es: \n");
 //   imprimir_matriz_reales(pheromones,1+cvrp_num_cities, 1 + cvrp_num_cities );
-
-  // Inicializo variables globales
-  aoc_best = (int*) malloc( max_solution_size );
-  aoc_best_size = 0;
-  aoc_best_duration = INT_MAX;
-  aoc_iteration_best_found = 0;
-  aoc_total_iterations = 0;
   
   do {
     // Inicializo todo para construir todo de nuevo
@@ -312,7 +329,7 @@ void run_aoc_metaheuristic(){
         aoc_iteration_best_found = aoc_total_iterations;
         copy(P[Psize], aoc_best);
         aoc_best_duration = durations[Psize];
-        printf("Mejor solucion encontrada. Duracion: %d\n", aoc_best_duration);
+        printf("Mejor solucion encontrada. Duracion: %d, iteracion actual: %d\n", aoc_best_duration, aoc_total_iterations);
       }
       ++Psize;
     }
@@ -320,8 +337,16 @@ void run_aoc_metaheuristic(){
     updatePheromones(P,durations, pheromones);
 //     printf("############## FEROMONAS ####################\n");
 //     imprimir_matriz_reales(pheromones,1+cvrp_num_cities, 1 + cvrp_num_cities );
+  // Actualizar dinamicamente el factor de seleccion de componentes
+//     if (aoc_iteration_best_found != aoc_total_iterations){
+//       aoc_component_selection_rate *= 1.1;
+//       if ( aoc_component_selection_rate > 1.0 ) aoc_component_selection_rate = 1;
+//     } else {
+//       aoc_component_selection_rate *= 0.95;
+//       if (aoc_component_selection_rate <= 0.0 ) aoc_component_selection_rate = 0.1;
+//     }
     ++aoc_total_iterations;
-  } while( !terminar() );
+  } while( !finish_function() );
   gettimeofday(&t_fin, 0);
   aoc_time_best_found = timeval_diff(&t_best, &t_ini);
   aoc_total_time = timeval_diff(&t_fin, &t_ini);
@@ -345,6 +370,9 @@ void print_results(){
     if( i > 0 && aoc_best[i] == 0 )
       printf("\n%d ", 0);
   }
+//   for ( i = 0 ; i <= 2 * cvrp_num_cities ; ++i )
+//     printf("%d ", aoc_best[i]);
+//   printf("\n");
   verified_solution();
 }
 
@@ -365,20 +393,20 @@ void verified_solution() {
     }
     edgeCost = cvrp_distMat[aoc_best[i]][aoc_best[i + 1]];
     routeDuration += edgeCost;
-    totalDuration += edgeCost;
     if(aoc_best[i] != 0) {
       ++numClient;
       routeDuration += cvrp_drop_time;
-      routeDemand += cvrp_demand[i];
+      routeDemand += cvrp_demand[aoc_best[i]];
     }
     
     if(aoc_best[i+1] == 0) {
-      printf("the duration for route %d is %d\n",routeNum,routeDuration);
-      printf("the demand for route %d is %d\n",routeNum,routeDemand);
+//       printf("the duration for route %d is %d\n",routeNum,routeDuration);
+//       printf("the demand for route %d is %d\n",routeNum,routeDemand);
       if(routeDuration > cvrp_max_route_duration)
-	printf("the route exceeds the max route duration\n");
+        printf("the route %d exceeds the max route duration\n" , routeNum);
       if(routeDemand > cvrp_truck_capacity)
-	printf("the route exceeds the max truck capacity\n");
+        printf("the route %d exceeds the max truck capacity. Expect %d <= %d\n" , routeNum, routeDemand, cvrp_truck_capacity);
+      totalDuration += routeDuration;
       routeDuration = 0;
       routeDemand = 0;
       ++routeNum;
@@ -387,7 +415,118 @@ void verified_solution() {
   }
   
   if(totalDuration != aoc_best_duration) {
-    printf("the tour duration doesnt correspond to the compute duration\n");
+    printf("the tour duration doesnt correspond to the computed duration\n");
   }
     
+}
+
+void print_usage(){
+  printf("Opciones:\n\n");
+  
+  printf("\t-a <total_ants>\n");
+  printf("\t\tEspecifica el numero total de soluciones que se construyen por iteracion.\n");
+  printf("\t\tEl numero por defecto es igual al numero de ciudades.\n\n");
+  
+  printf("\t-c <component_selection_rate>\n");
+  printf("\t\tEspecifica cuantos componentes van a seleccionarse del total de componentes factibles.\n");
+  printf("\t\tEl numero debe estar en (0.0 , 1.0]. Valor por defecto: 0.3\n\n");
+  
+  printf("\t-e <evaporation_rate>\n");
+  printf("\t\tEspecifica el factor de evaporacion de las feromonas.\n");
+  printf("\t\tDebe estar entre [0.0, 1.0]. Por defecto: 0.2\n\n");
+  
+  printf("\t-t <finish_function> <finish_param>\n");
+  printf("\t\tEspecifica la funcion para terminar la metaheuristicas. Los posibles valores son:\n");
+  printf("\t\t\timprovement en cuyo caso finish_param es el numero de iteraciones que pasan sin mejorar la solucion\n");
+  printf("\t\t\tfixed en cuyo caso finish_param especifica el numero de iteraciones maximas\n");
+  printf("\t\t\ttime en cuyo caso finish_param es el numero de segundos maximo que debe correr la solucion\n");
+  printf("\t\tCuando no se especifica, la funcion usada por defecto es por tiempo con 60 segundos.\n");
+  exit(1);
+  
+}
+
+void initialize_aoc(char ** args, int argc){
+  int i;
+  for ( i = 0 ; i < argc ; ++i){
+    if ( strcmp("-a", args[i]) == 0 ){
+      // Total de hormigas
+      if ( i + 1 == argc ) print_usage();
+      aoc_total_ants = atoi(args[++i]);
+    } else if ( strcmp("-c", args[i]) == 0 ){
+      // Rango de seleccion de componentes
+      if ( i + 1 == argc ) print_usage();
+      aoc_component_selection_rate = atof(args[++i]);
+    } else if ( strcmp("-e", args[i]) == 0 ){
+      // Rango de evaporacion
+      if ( i + 1 == argc ) print_usage();
+      aoc_evaporation_rate = atof(args[++i]);
+    } else if ( strcmp("-t", args[i]) == 0 ){
+      // -t <finish_function> <finish_param>
+      if ( i + 2 >= argc ) print_usage();
+      ++i;
+      if ( strcmp("improvement", args[i]) == 0 ){
+        finish_function = finish_not_improvement;
+      } else if ( strcmp("fixed", args[i]) == 0 ){
+        finish_function = finish_fixed_iterations;
+      } else if ( strcmp("time", args[i]) == 0 ){
+        finish_function = finish_time;
+      } else {
+        print_usage();
+      }
+      finish_param = atoi(args[++i]);
+    } 
+  }
+
+  if ( aoc_evaporation_rate == 0 ||
+    (aoc_evaporation_rate != -1 && aoc_evaporation_rate < 0.0) ||
+    aoc_evaporation_rate > 1.0 || 
+       aoc_component_selection_rate == 0 ||
+       (aoc_component_selection_rate != -1 && aoc_component_selection_rate < 0.0) ||
+       aoc_component_selection_rate > 1.0 ||
+       aoc_total_ants == 0 ||
+       finish_param == 0 ) {
+    print_usage();
+  }
+  if ( aoc_evaporation_rate == -1 ) aoc_evaporation_rate = 0.2;
+  if ( aoc_component_selection_rate == -1 ) aoc_component_selection_rate = 0.3;
+  if ( aoc_total_ants == -1 ) aoc_total_ants = cvrp_num_cities;
+  if ( finish_param == -1 ) {
+    finish_function = finish_time;
+    finish_param = 60;
+  }
+  aoc_iteration_best_found = 0;
+  aoc_total_iterations = 0;
+  aoc_time_best_found = 0.0;;
+  aoc_total_time = 0.0;
+  aoc_best = (int*) malloc( ( cvrp_num_cities * 2 + 1 ) * sizeof(int));
+  aoc_best_duration = INT_MAX;
+  aoc_best_size = 0;
+  
+}
+
+int finish_not_improvement(){
+  if ( aoc_total_iterations - aoc_iteration_best_found  >= finish_param)
+    return 1;
+  return 0;
+}
+// Terminar luego de un # fijo de iteraciones. Requiere el numero maximo de iteraciones
+int finish_fixed_iterations(){
+  if ( aoc_total_iterations  >= finish_param)
+    return 1;
+  return 0;
+}
+// Terminar luego de cierto tiempo. Requiere el tiempo maximo
+int finish_time(){
+  gettimeofday(&t_fin, 0);
+  aoc_total_time = timeval_diff(&t_fin, &t_ini);
+  if ( aoc_total_time  >= finish_param)
+    return 1;
+  return 0;
+}
+
+void print_aoc(){
+  printf("\n/****************** AOC configuration ***************/\naoc_evaporation_rate: %f\n", aoc_evaporation_rate);
+  printf("aoc_component_selection_rate: %f\n", aoc_component_selection_rate);
+  printf("aoc_total_ants: %d\n", aoc_total_ants);
+  printf("finish_param: %d\n\n", finish_param);
 }

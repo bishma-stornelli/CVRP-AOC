@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/time.h>
+#include <time.h>
 #include "TSP-TEST.V0.9/instance.h"
 #include "TSP-TEST.V0.9/ls.h"
 #include "TSP-TEST.V0.9/utilities.h"
@@ -29,6 +29,7 @@ int cvrp_drop_time;
 void cvrp_load_instance(char *cvrp_file_name);
 
 void cvrp_load_instance(char *cvrp_file_name) {
+  seed = (long int) time(NULL);
   
   FILE *tsp_file;
   FILE *cvrp_file;
@@ -46,8 +47,7 @@ void cvrp_load_instance(char *cvrp_file_name) {
   fprintf(tsp_file, "COMMENT : %s (S.Eilon, C.D.T.Watson-Gandy and N.Christofides)\n",cvrp_file_name);
   fscanf(cvrp_file,"%s", buf);
   cvrp_num_cities = atoi(buf);
-  cvrp_demand = (int*) malloc( (cvrp_num_cities+1) * sizeof(int));
-  memset(cvrp_demand, 0, (cvrp_num_cities + 1));
+  cvrp_demand = (int*) calloc( (cvrp_num_cities+1) , sizeof(int));
   
   fprintf(tsp_file, "DIMENSION : %d\n",cvrp_num_cities+1);
   fprintf(tsp_file, "EDGE_WEIGHT_TYPE : EUC_2D\n");
@@ -96,8 +96,4 @@ void cvrp_load_instance(char *cvrp_file_name) {
   nn_ls = MIN (ncities - 1, 40);
   nnMat = compute_NNLists();
   cvrp_distMat = distMat;
-  struct timeval a;
-  gettimeofday(&a, 0);
-  seed = (long)a.tv_usec;
-  printf("Semilla inicializada en: %d\n" , seed);
 }
