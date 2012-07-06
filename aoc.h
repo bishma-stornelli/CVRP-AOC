@@ -4,9 +4,6 @@
 /*********** PARAMETROS RECIBIDOS POR CONSOLA ***************/
 extern double aoc_evaporation_rate;
 
-// Porcentaje que determina cuantos de los componentes disponibles van a ser
-// seleccionados para elegir aleatoriamente el componente final.
-extern double aoc_component_selection_rate;
 
 // Tamano de la poblacion que va a construir en cada iteracion
 extern int aoc_total_ants;
@@ -16,6 +13,10 @@ extern int finish_param;
 
 // Apuntador a funcion usada para terminar
 extern int (*finish_function)();
+
+extern double aoc_pheromone_amplification;
+
+extern double aoc_heuristic_amplification;
 
 /************** OTROS PARAMETROS INTERNOS ****************/
 

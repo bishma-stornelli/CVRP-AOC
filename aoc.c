@@ -4,6 +4,7 @@
 #include <sys/time.h>
 #include <string.h>
 #include <unistd.h>
+#include <math.h>
 
 #include "TSP-TEST.V0.9/utilities.h"
 #include "TSP-TEST.V0.9/instance.h"
@@ -13,9 +14,6 @@
 
 double aoc_evaporation_rate = -1;
 
-// Porcentaje que determina cuantos de los componentes disponibles van a ser
-// seleccionados para elegir aleatoriamente el componente final.
-double aoc_component_selection_rate = -1;
 
 // Tamano de la poblacion que va a construir en cada iteracion
 int aoc_total_ants = -1;
@@ -24,6 +22,10 @@ int aoc_total_ants = -1;
 int aoc_iteration_best_found;
 
 int finish_param = -1;
+
+double aoc_pheromone_amplification = -1;
+
+double aoc_heuristic_amplification = -1;
 
 // Numero de iteraciones totales
 int aoc_total_iterations = 0;
@@ -160,17 +162,40 @@ void Quicksort(const double **pheromones, int current_customer, int* v, int b, i
     Quicksort(pheromones,current_customer, v, pivote+1, t);
   }
 }
+/***************** GET COMPONENT USANDO QUICKSORT **********************/
+// int getComponent(int * components, int components_size, int current_customer, const double ** pheromones){
+// //   printf("Empezando a aplicar quicksort en los componentes: "); imprimir_arreglo(components, components_size);
+//   // Aplico quicksort para ordenar los componentes
+//   Quicksort(pheromones, current_customer, components, 0 , components_size - 1);
+// //   printf("Luego del quicksort los componentes quedaron asi: "); imprimir_arreglo(components, components_size);
+//   // Una vez arreglado elijo uno aleatorio de entre los primeros
+//   int temp = random_number(&seed) % (int)(1 + aoc_component_selection_rate * components_size);
+// //   printf("seed: %ld\n", seed);
+// //   printf("random_number: %d\n", temp);
+//   return components[ temp ];
+// }
 
+/***** GET COMPONENT USANDO LA FUNCION PROPUESTA EN HANDBOOK OF METAHEURISTICS *****/
 int getComponent(int * components, int components_size, int current_customer, const double ** pheromones){
-//   printf("Empezando a aplicar quicksort en los componentes: "); imprimir_arreglo(components, components_size);
-  // Aplico quicksort para ordenar los componentes
-  Quicksort(pheromones, current_customer, components, 0 , components_size - 1);
-//   printf("Luego del quicksort los componentes quedaron asi: "); imprimir_arreglo(components, components_size);
-  // Una vez arreglado elijo uno aleatorio de entre los primeros
-  int temp = random_number(&seed) % (int)(1 + aoc_component_selection_rate * components_size);
-//   printf("seed: %ld\n", seed);
-//   printf("random_number: %d\n", temp);
-  return components[ temp ];
+  int l;
+  double b = 0.0;
+  for ( l = 0 ; l < components_size ; ++l ){
+    b += pow( pheromones[current_customer][components[l]] , aoc_pheromone_amplification ) *
+        pow( 1.0 / (double)cvrp_distMat[current_customer][components[l]] , aoc_heuristic_amplification );
+  }
+  int i = 5;
+  while(--i >= 0){
+    for ( l = 0 ; l < components_size ; ++l ){
+      double p = (pow( pheromones[current_customer][components[l]] , aoc_pheromone_amplification ) *
+                  pow( 1.0 / (double)cvrp_distMat[current_customer][components[l]] , aoc_heuristic_amplification )) / b;
+      double r = random_number(&seed);
+//       printf("%f < %f ... %f\n", r , p * INT_MAX , p);
+      if (  r < p * INT_MAX  ){
+        return components[l];
+      }
+    }
+  }
+  return components[0];
 }
 
 // Evapora cada feromona en (1 - aoc_evaporation_rate)
@@ -180,22 +205,25 @@ void evaporatePheromones(double **pheromones){
     for(j = 0 ; j < 1 + cvrp_num_cities ; ++j)
       pheromones[i][j] *= (1 - aoc_evaporation_rate);
 }
+double update_function(double d, double aditional_weight){
+  return aditional_weight / d;
+}
 
 void updatePheromones(const int ** P, const int * durations, double ** pheromones){
   int i,j;
-  if (worst_solution_duration == -1 ){
-    worst_solution_duration = 0;
-    for( i = 0 ; i < cvrp_num_cities ; ++i)
-        worst_solution_duration += 2 * cvrp_distMat[0][i]; 
-  }
+//   if (worst_solution_duration == -1 ){
+//     worst_solution_duration = 0;
+//     for( i = 0 ; i < cvrp_num_cities ; ++i)
+//         worst_solution_duration += 2 * cvrp_distMat[0][i]; 
+//   }
   for( i = 0 ; i < aoc_total_ants ; ++i){
     for( j = 0 ; j < 2 * cvrp_num_cities ; ++j){
       if (P[i][j] == 0 && P[i][j + 1] == 0){
         // La solucion termina cuando hay dos 0s seguidos indicando una ruta vacia
         break;
       }
-      pheromones[P[i][j]][P[i][j + 1]] += worst_solution_duration - durations[i];
-      pheromones[P[i][j + 1]][P[i][j]] += worst_solution_duration - durations[i];
+      pheromones[P[i][j]][P[i][j + 1]] += update_function(durations[i],1);//worst_solution_duration - durations[i];
+      pheromones[P[i][j + 1]][P[i][j]] += update_function(durations[i],1);//worst_solution_duration - durations[i];
     }
   }
 }
@@ -239,6 +267,15 @@ void imprimir_arreglo(int *v, int n ){
   printf("\n");
 }
 
+void elitistStrategy(double **p){
+  int i;
+  for ( i = 0 ; i < 2 * cvrp_num_cities ; ++i){
+    if ( aoc_best[i] == 0 && aoc_best[i+1] == 0 ) break;
+    p[aoc_best[i]][aoc_best[i+1]] = update_function(aoc_best_duration, 3);
+    p[aoc_best[i+1]][aoc_best[i]] = update_function(aoc_best_duration, 3);
+  }
+}
+
 void run_aoc_metaheuristic(){
   
   
@@ -266,7 +303,11 @@ void run_aoc_metaheuristic(){
   int * visited = (int*) malloc(( 1 + cvrp_num_cities) * sizeof(int));
   // matriz de feromonas
   double ** pheromones = (double**) malloc( (1 + cvrp_num_cities) * sizeof(double*));
-  for(i = 0 ; i <= cvrp_num_cities ; ++i) pheromones[i] = (double*) calloc( 1 + cvrp_num_cities, sizeof(double));
+  for(i = 0 ; i <= cvrp_num_cities ; ++i){
+    pheromones[i] = (double*) malloc( (1 + cvrp_num_cities)* sizeof(double));
+    for ( j = 0 ; j <= cvrp_num_cities ; ++j )
+      pheromones[i][j] = 1.0;
+  }
 
 //   printf("La matriz de feromonas es: \n");
 //   imprimir_matriz_reales(pheromones,1+cvrp_num_cities, 1 + cvrp_num_cities );
@@ -296,7 +337,7 @@ void run_aoc_metaheuristic(){
           break;
         } else {
           int component = getComponent(C, Csize, P[Psize][currentPosition - 1], pheromones);
-//           printf("El componente elegido es: %d\n", component); 
+//           printf("El componente elegido es: %d\n", component);
           
           P[Psize][currentPosition] = component;
           visited[component] = 1;
@@ -329,12 +370,13 @@ void run_aoc_metaheuristic(){
         aoc_iteration_best_found = aoc_total_iterations;
         copy(P[Psize], aoc_best);
         aoc_best_duration = durations[Psize];
-        printf("Mejor solucion encontrada. Duracion: %d, iteracion actual: %d\n", aoc_best_duration, aoc_total_iterations);
+        printf("Mejor solucion encontrada. Duracion: %d, iteracion actual: %d\n", aoc_best_duration - cvrp_drop_time * cvrp_num_cities, aoc_total_iterations);
       }
       ++Psize;
     }
     evaporatePheromones(pheromones);
     updatePheromones(P,durations, pheromones);
+    elitistStrategy(pheromones);
 //     printf("############## FEROMONAS ####################\n");
 //     imprimir_matriz_reales(pheromones,1+cvrp_num_cities, 1 + cvrp_num_cities );
   // Actualizar dinamicamente el factor de seleccion de componentes
@@ -427,13 +469,17 @@ void print_usage(){
   printf("\t\tEspecifica el numero total de soluciones que se construyen por iteracion.\n");
   printf("\t\tEl numero por defecto es igual al numero de ciudades.\n\n");
   
-  printf("\t-c <component_selection_rate>\n");
-  printf("\t\tEspecifica cuantos componentes van a seleccionarse del total de componentes factibles.\n");
-  printf("\t\tEl numero debe estar en (0.0 , 1.0]. Valor por defecto: 0.3\n\n");
-  
   printf("\t-e <evaporation_rate>\n");
   printf("\t\tEspecifica el factor de evaporacion de las feromonas.\n");
   printf("\t\tDebe estar entre [0.0, 1.0]. Por defecto: 0.2\n\n");
+
+  printf("\t-h <heuristic_amplification>\n");
+  printf("\t\tEspecifica el factor de amplificacion de la informacion especifica del CVRP usada para seleccionar los componentes.\n");
+  printf("\t\tDebe ser >= 0. Por defecto: 1.0\n\n");
+
+  printf("\t-p <pheromone_amplification>\n");
+  printf("\t\tEspecifica el factor de amplificacion de las feromonas usadas para seleccionar los componentes.\n");
+  printf("\t\tDebe ser >= 0. Por defecto: 1.0\n\n");
   
   printf("\t-t <finish_function> <finish_param>\n");
   printf("\t\tEspecifica la funcion para terminar la metaheuristicas. Los posibles valores son:\n");
@@ -452,15 +498,19 @@ void initialize_aoc(char ** args, int argc){
       // Total de hormigas
       if ( i + 1 == argc ) print_usage();
       aoc_total_ants = atoi(args[++i]);
-    } else if ( strcmp("-c", args[i]) == 0 ){
-      // Rango de seleccion de componentes
-      if ( i + 1 == argc ) print_usage();
-      aoc_component_selection_rate = atof(args[++i]);
     } else if ( strcmp("-e", args[i]) == 0 ){
       // Rango de evaporacion
       if ( i + 1 == argc ) print_usage();
       aoc_evaporation_rate = atof(args[++i]);
-    } else if ( strcmp("-t", args[i]) == 0 ){
+    }  else if ( strcmp("-p", args[i]) == 0 ){
+      // Rango de evaporacion
+      if ( i + 1 == argc ) print_usage();
+      aoc_pheromone_amplification = atof(args[++i]);
+    } else if ( strcmp("-h", args[i]) == 0 ){
+      // Rango de evaporacion
+      if ( i + 1 == argc ) print_usage();
+      aoc_heuristic_amplification = atof(args[++i]);
+    }else if ( strcmp("-t", args[i]) == 0 ){
       // -t <finish_function> <finish_param>
       if ( i + 2 >= argc ) print_usage();
       ++i;
@@ -479,21 +529,21 @@ void initialize_aoc(char ** args, int argc){
 
   if ( aoc_evaporation_rate == 0 ||
     (aoc_evaporation_rate != -1 && aoc_evaporation_rate < 0.0) ||
-    aoc_evaporation_rate > 1.0 || 
-       aoc_component_selection_rate == 0 ||
-       (aoc_component_selection_rate != -1 && aoc_component_selection_rate < 0.0) ||
-       aoc_component_selection_rate > 1.0 ||
+    aoc_evaporation_rate > 1.0 ||
        aoc_total_ants == 0 ||
-       finish_param == 0 ) {
+       finish_param == 0 ||
+       (aoc_heuristic_amplification != -1 && aoc_heuristic_amplification < 0.0) ||
+       (aoc_pheromone_amplification != -1 && aoc_pheromone_amplification < 0.0)) {
     print_usage();
   }
   if ( aoc_evaporation_rate == -1 ) aoc_evaporation_rate = 0.2;
-  if ( aoc_component_selection_rate == -1 ) aoc_component_selection_rate = 0.3;
   if ( aoc_total_ants == -1 ) aoc_total_ants = cvrp_num_cities;
   if ( finish_param == -1 ) {
     finish_function = finish_time;
     finish_param = 60;
   }
+  if ( aoc_heuristic_amplification == -1 ) aoc_heuristic_amplification = 1.0;
+  if ( aoc_pheromone_amplification == -1 ) aoc_pheromone_amplification = 1.0;
   aoc_iteration_best_found = 0;
   aoc_total_iterations = 0;
   aoc_time_best_found = 0.0;;
@@ -501,7 +551,7 @@ void initialize_aoc(char ** args, int argc){
   aoc_best = (int*) malloc( ( cvrp_num_cities * 2 + 1 ) * sizeof(int));
   aoc_best_duration = INT_MAX;
   aoc_best_size = 0;
-  
+  print_aoc();
 }
 
 int finish_not_improvement(){
@@ -526,7 +576,6 @@ int finish_time(){
 
 void print_aoc(){
   printf("\n/****************** AOC configuration ***************/\naoc_evaporation_rate: %f\n", aoc_evaporation_rate);
-  printf("aoc_component_selection_rate: %f\n", aoc_component_selection_rate);
   printf("aoc_total_ants: %d\n", aoc_total_ants);
   printf("finish_param: %d\n\n", finish_param);
 }
