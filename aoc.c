@@ -23,7 +23,7 @@ double aoc_time_best_found;
 double aoc_total_time;
 
 // Tamano de la poblacion que va a construir en cada iteracion
-int aoc_total_ants = 5;
+int aoc_total_ants;
 
 // Arreglo que contiene la mejor solucion encontrada
 // Por ejemplo 0 2 4 0 1 0 3 5 0 0 0 es la representacion de una solucion
@@ -221,6 +221,7 @@ void run_aoc_metaheuristic(){
   // Taking the initial time
   gettimeofday(&t_ini, 0);
   
+  aoc_total_ants = cvrp_num_cities;
   int max_solution_size = (2 * cvrp_num_cities + 1 ) * sizeof(int);
   // Psize contiene el numero de soluciones construidas para cada iteracion
   int Psize = 0;
@@ -252,7 +253,6 @@ void run_aoc_metaheuristic(){
   aoc_best_duration = INT_MAX;
   aoc_iteration_best_found = 0;
   aoc_total_iterations = 0;
-
   
   do {
     // Inicializo todo para construir todo de nuevo
