@@ -303,8 +303,6 @@ void map(int length_route, int * tour_route) {
 
 }
 
-
-
 void run_aoc_metaheuristic(){
   
   
@@ -386,21 +384,21 @@ void run_aoc_metaheuristic(){
 	    */
 	    if(length_route > 5) {
 	      
-	      int * old_tour_route = (int*) malloc(length_route * sizeof(int));
+	      int * real_tour_route = (int*) malloc(length_route * sizeof(int));
 	      int * tour_route = (int*) malloc(length_route * sizeof(int));
 	      int k;
 	      for(k = 0; k < length_route; ++k) {
-		old_tour_route[k] = P[Psize][indexOfLastRoute + k];
+		real_tour_route[k] = P[Psize][indexOfLastRoute + k];
 		tour_route[k] = k;
 	      }
 	      tour_route[length_route - 1] = 0;
-	      map(length_route, old_tour_route);
+	      map(length_route, real_tour_route);
 	      int m,n;
 	      
 	      /*
 	      printf("\nReal Tour before opt: ");
 	      for(k = 0; k < length_route; ++k)
-		printf("%d ", old_tour_route[k]);
+		printf("%d ", real_tour_route[k]);
 	      printf("\nTour before opt: ");
 	      for(k = 0; k < length_route; ++k)
 		printf("%d ", tour_route[k]);
@@ -408,9 +406,9 @@ void run_aoc_metaheuristic(){
 	      
 	      dlb = calloc(ncities, sizeof(int));
 	      if(length_route > 12) {
-		three_opt_first(tour_route);
+		two_opt_best(tour_route);
 	      } else {
-		three_opt_first(tour_route); //two_opt_first(tour_route);
+		two_opt_best(tour_route); // three_opt_first(tour_route); 
 	      }
 	      /*
 	      printf("\n");
@@ -421,7 +419,7 @@ void run_aoc_metaheuristic(){
 
 	      if(tour_route[0] == 0) {
 		for(k = 1; k < length_route - 1; ++k) {
-		  P[Psize][indexOfLastRoute + k] = old_tour_route[tour_route[k]];
+		  P[Psize][indexOfLastRoute + k] = real_tour_route[tour_route[k]];
 		}
 	      } else {
 		int depot_index = 0;
@@ -431,11 +429,11 @@ void run_aoc_metaheuristic(){
 		}
 		int l = 1;
 		for(k = depot_index + 1; k < length_route - 1; ++k) {
-		  P[Psize][indexOfLastRoute + l] = old_tour_route[tour_route[k]];
+		  P[Psize][indexOfLastRoute + l] = real_tour_route[tour_route[k]];
 		  ++l;
 		}
 		for(k = 0; k < depot_index; ++k) {
-		  P[Psize][indexOfLastRoute + l] = old_tour_route[tour_route[k]];
+		  P[Psize][indexOfLastRoute + l] = real_tour_route[tour_route[k]];
 		  ++l;
 		}
 
@@ -453,6 +451,8 @@ void run_aoc_metaheuristic(){
 		Rduration += cvrp_distMat[P[Psize][indexOfLastRoute + k]][P[Psize][indexOfLastRoute + k + 1]];
 	      }
 	      // printf("Route Duration After: %d\n", Rduration);
+	      free(real_tour_route);
+	      free(tour_route);
 
 	    } else {	    
 	      /*Sduration += calculateTourDuration(tour) + ncities * dropTime;*/

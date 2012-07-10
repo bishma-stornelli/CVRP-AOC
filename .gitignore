@@ -12,3 +12,7 @@
 *.la
 *.a
 /nbproject/private/
+
+# Other
+tsp_file_name
+cvrp
