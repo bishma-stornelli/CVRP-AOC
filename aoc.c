@@ -8,6 +8,7 @@
 
 #include "TSP-TEST.V0.9/utilities.h"
 #include "TSP-TEST.V0.9/instance.h"
+#include "TSP-TEST.V0.9/ls.h"
 
 #include "aoc.h"
 #include "cvrp_instance.h"
@@ -277,6 +278,34 @@ void elitistStrategy(double **p){
   }
 }
 
+void map(int length_route, int * tour_route) {
+  
+  ncities = length_route - 1;
+  int **matrix;
+  if((matrix = (int **)malloc(ncities * sizeof(int*))) == NULL ) {
+    printf("Out of memory, exit.");
+    exit(1);
+  }
+  int i, j;
+  for(i = 0; i < ncities; ++i) {
+    matrix[i] = (int *) malloc (ncities * sizeof(int));
+    if(matrix[i] == NULL) {
+      printf("Out of memory, exit.");
+      exit(1);
+    }
+    for(j = 0; j < ncities; ++j) 
+      matrix[i][j] = cvrp_distMat[tour_route[i]][tour_route[j]];
+  }
+  free(distMat);
+  free(nnMat);
+  distMat = matrix;
+  nn_ls = MIN (ncities - 1, 40);
+  nnMat = compute_NNLists();
+
+}
+
+
+
 void run_aoc_metaheuristic(){
   
   
@@ -347,20 +376,98 @@ void run_aoc_metaheuristic(){
           P[Psize][currentPosition] = component;
           visited[component] = 1;
           
-          if( component == 0 ){
+          if( component == 0 ) {
             // Si el componente es el deposito, acabo de terminar de construir
             // una ruta y puedo aplicarle el 3-opt
             // Falta verificar que el tamano de la ruta sea el minimo requerido para 3-opt
             /*int * tour = &(P[Psize][indexOfLastRoute]); // PUEDE HABER UN GRAN BUG EN ESTA LINEA
-            ncities = currentPosition - indexOfLastRoute; // Actualizo ncities para aplicar el three_opt_first
-            three_opt_first(tour);
-            Sduration += calculateTourDuration(tour) + ncities * dropTime;*/
-            Rduration += cvrp_distMat[P[Psize][currentPosition - 1]][component];
-            Sduration += Rduration;
-            indexOfLastRoute = currentPosition;
+            ncities = currentPosition - indexOfLastRoute; // Actualizo ncities para aplicar el three_opt_first*/
+            
+            int length_route = currentPosition - indexOfLastRoute + 1;
+	    /*
+	    printf("\nindexOfLastRoute: %d",indexOfLastRoute);
+	    printf("\ncurrentPosition:  %d",currentPosition);
+	    printf("\nlength_route: %d",length_route);
+	    */
+	    if(length_route > 5) {
+	      
+	      int * old_tour_route = (int*) malloc(length_route * sizeof(int));
+	      int * tour_route = (int*) malloc(length_route * sizeof(int));
+	      int k;
+	      for(k = 0; k < length_route; ++k) {
+		old_tour_route[k] = P[Psize][indexOfLastRoute + k];
+		tour_route[k] = k;
+	      }
+	      tour_route[length_route - 1] = 0;
+	      map(length_route, old_tour_route);
+	      int m,n;
+	      
+	      /*
+	      printf("\nReal Tour before opt: ");
+	      for(k = 0; k < length_route; ++k)
+		printf("%d ", old_tour_route[k]);
+	      printf("\nTour before opt: ");
+	      for(k = 0; k < length_route; ++k)
+		printf("%d ", tour_route[k]);
+	      */
+	      
+	      dlb = calloc(ncities, sizeof(int));
+	      if(length_route > 12) {
+		three_opt_first(tour_route);
+	      } else {
+		three_opt_first(tour_route); //two_opt_first(tour_route);
+	      }
+	      /*
+	      printf("\n");
+	      printf("Tour after opt: ");
+	      for(k = 0; k < length_route; ++k)
+		printf("%d ", tour_route[k]);
+	      */
+
+	      if(tour_route[0] == 0) {
+		for(k = 1; k < length_route - 1; ++k) {
+		  P[Psize][indexOfLastRoute + k] = old_tour_route[tour_route[k]];
+		}
+	      } else {
+		int depot_index = 0;
+		for(k = 1; k < length_route - 1; ++k) {
+		  if(tour_route[k] == 0)
+		    depot_index = k;
+		}
+		int l = 1;
+		for(k = depot_index + 1; k < length_route - 1; ++k) {
+		  P[Psize][indexOfLastRoute + l] = old_tour_route[tour_route[k]];
+		  ++l;
+		}
+		for(k = 0; k < depot_index; ++k) {
+		  P[Psize][indexOfLastRoute + l] = old_tour_route[tour_route[k]];
+		  ++l;
+		}
+
+	      }
+	      /*
+	      printf("\nReal Tour after opt: ");
+	      for(k = 0; k < length_route; ++k)
+		printf("%d ",P[Psize][indexOfLastRoute + k]);
+	      
+	      printf("\nRoute Duration Before: %d\n", Rduration + cvrp_distMat[P[Psize][currentPosition - 1]][component]);
+	      */
+	      Rduration = 0;  
+
+	      for(k = 0; k < length_route - 1; ++k) {
+		Rduration += cvrp_distMat[P[Psize][indexOfLastRoute + k]][P[Psize][indexOfLastRoute + k + 1]];
+	      }
+	      // printf("Route Duration After: %d\n", Rduration);
+
+	    } else {	    
+	      /*Sduration += calculateTourDuration(tour) + ncities * dropTime;*/
+	      Rduration += cvrp_distMat[P[Psize][currentPosition - 1]][component];
+	      //++Rnumber[Psize];
+	    }
+	    Sduration += Rduration;
+	    indexOfLastRoute = currentPosition;
             Rduration = 0;
             Rdemand = 0;
-	    //++Rnumber[Psize];
           } else {
             // Actualizar duracion y capacidad de la ruta y la duracion de la solucion
             Rduration += cvrp_distMat[P[Psize][currentPosition - 1]][component] + cvrp_drop_time;
