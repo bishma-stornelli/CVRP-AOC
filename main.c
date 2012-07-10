@@ -11,6 +11,8 @@
 #include "cvrp_instance.h"
 #include "aoc.h"
 
+
+
 void print_instance(){
   printf("cvrp_num_cities: %d\n" , cvrp_num_cities);
   printf("cvrp_max_route_duration: %d\n" , cvrp_max_route_duration);
@@ -29,9 +31,13 @@ void print_instance(){
 
 int main(int argc, char **argv) {
   cvrp_load_instance(argv[1]);
-//   print_instance();
+#ifdef DEBUG
+  print_instance();
+#endif
   initialize_aoc(argv, argc);
-//   print_aoc();
+#ifdef DEBUG
+  print_aoc();
+#endif
   run_aoc_metaheuristic();
   print_results();
   return 0;

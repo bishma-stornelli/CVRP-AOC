@@ -98,11 +98,12 @@ void getFeasibleComponents(const int * visited, int currentCustomer, int Rdurati
   *Csize = 0;
   // Veo a que ciudades puedo ir
   int i ;
+  // Para cada cliente
   for( i = 1 ; i <= cvrp_num_cities ; ++i){
-    if(!visited[i] &&
-      ( Rduration + // La duracion actual
-        cvrp_distMat[currentCustomer][i] + // Mas llegar al siguiente
-        (currentCustomer != 0 ? cvrp_distMat[i][0] + cvrp_drop_time : 0 ) // Mas regresar al deposito si el actual no es el deposito
+    if(!visited[i] && // Si no se ha visitado
+      ( Rduration + // y la duracion actual
+        cvrp_distMat[currentCustomer][i] + // mas la duracion para llegar al cliente
+        cvrp_distMat[i][0] + cvrp_drop_time // y regresarme al deposito mas el tiempo de atender un cliente mas
         <=  cvrp_max_route_duration  // Es menor que la duracion maxima
         && (Rdemand + cvrp_demand[i] <= cvrp_truck_capacity)) // Verifico que no exceda la capacidad
 
@@ -127,42 +128,42 @@ void getFeasibleComponents(const int * visited, int currentCustomer, int Rdurati
 }
 
 // Tomado y adaptado de wikipedia
-int colocar(const double **pheromones, int current_customer, int *v, int b, int t)
-{
-  int i;
-  int pivote;
-  double valor_pivote;
-  int f_pivote;
-  int temp;
-  
-  pivote = b;
-  valor_pivote = pheromones[current_customer][v[pivote]];
-  f_pivote = cvrp_distMat[current_customer][v[pivote]];
-  for (i=b+1; i<=t; i++){
-    if (pheromones[current_customer][v[i]] < valor_pivote ||
-      (pheromones[current_customer][v[i]] == valor_pivote && cvrp_distMat[current_customer][v[i]] < f_pivote)){
-      pivote++;
-      temp=v[i];
-      v[i]=v[pivote];
-      v[pivote]=temp;
-    }
-  }
-  temp=v[b];
-  v[b]=v[pivote];
-  v[pivote]=temp;
-  return pivote;
-}
-
-// Tomado y adaptado de wikipedia
-void Quicksort(const double **pheromones, int current_customer, int* v, int b, int t)
-{
-  int pivote;
-  if(b < t){
-    pivote=colocar(pheromones, current_customer, v, b, t);
-    Quicksort(pheromones,current_customer, v, b, pivote-1);
-    Quicksort(pheromones,current_customer, v, pivote+1, t);
-  }
-}
+// int colocar(const double **pheromones, int current_customer, int *v, int b, int t)
+// {
+//   int i;
+//   int pivote;
+//   double valor_pivote;
+//   int f_pivote;
+//   int temp;
+//   
+//   pivote = b;
+//   valor_pivote = pheromones[current_customer][v[pivote]];
+//   f_pivote = cvrp_distMat[current_customer][v[pivote]];
+//   for (i=b+1; i<=t; i++){
+//     if (pheromones[current_customer][v[i]] < valor_pivote ||
+//       (pheromones[current_customer][v[i]] == valor_pivote && cvrp_distMat[current_customer][v[i]] < f_pivote)){
+//       pivote++;
+//       temp=v[i];
+//       v[i]=v[pivote];
+//       v[pivote]=temp;
+//     }
+//   }
+//   temp=v[b];
+//   v[b]=v[pivote];
+//   v[pivote]=temp;
+//   return pivote;
+// }
+// 
+// // Tomado y adaptado de wikipedia
+// void Quicksort(const double **pheromones, int current_customer, int* v, int b, int t)
+// {
+//   int pivote;
+//   if(b < t){
+//     pivote=colocar(pheromones, current_customer, v, b, t);
+//     Quicksort(pheromones,current_customer, v, b, pivote-1);
+//     Quicksort(pheromones,current_customer, v, pivote+1, t);
+//   }
+// }
 /***************** GET COMPONENT USANDO QUICKSORT **********************/
 // int getComponent(int * components, int components_size, int current_customer, const double ** pheromones){
 // //   printf("Empezando a aplicar quicksort en los componentes: "); imprimir_arreglo(components, components_size);
@@ -355,7 +356,9 @@ void run_aoc_metaheuristic(){
         // Deberia considerar no solo el arco de llegada al nuevo componente sino tambien el regreso al deposito
         // Y ademas no deberia regresar 0 si la posicion actual es 0 (el deposito)
         getFeasibleComponents(visited, P[Psize][currentPosition - 1], Rduration, Rdemand, C, &Csize);
-//         printf("Los componentes factibles son: "); imprimir_arreglo( C, Csize);
+#ifdef DEBUG
+        printf("Los componentes factibles son: "); imprimir_arreglo( C, Csize);
+#endif
         if (Csize == 0){
           // Si no hay componentes factibles es porque ya se acabo de construir la solucion
           if ( currentPosition < max_solution_size ){
@@ -364,7 +367,9 @@ void run_aoc_metaheuristic(){
           break;
         } else {
           int component = getComponent(C, Csize, P[Psize][currentPosition - 1], pheromones);
-//           printf("El componente elegido es: %d\n", component);
+#ifdef DEBUG
+          printf("El componente elegido es: %d\n", component);
+#endif
           
           P[Psize][currentPosition] = component;
           visited[component] = 1;
@@ -477,7 +482,9 @@ void run_aoc_metaheuristic(){
         aoc_iteration_best_found = aoc_total_iterations;
         copy(P[Psize], aoc_best);
         aoc_best_duration = durations[Psize];
+#ifdef DEBUG
         printf("Mejor solucion encontrada. Duracion: %d, iteracion actual: %d\n", aoc_best_duration - cvrp_drop_time * cvrp_num_cities, aoc_total_iterations);
+#endif
       }
       ++Psize;
     }
@@ -502,27 +509,32 @@ void run_aoc_metaheuristic(){
 }
 
 void print_results(){
-  printf("Cost: %d\n", aoc_best_duration - cvrp_num_cities * cvrp_drop_time);
-  printf("Cost with drop time: %d\n", aoc_best_duration);
-  printf("Iteration until best found: %d\n", aoc_iteration_best_found);
-  printf("Total iterations: %d\n", aoc_total_iterations);
-  printf("Time until best found: %f\n", aoc_time_best_found);
-  printf("Total time elapsed: %f\n", aoc_total_time);
-  printf("Routes:\n");
-  int i,j;
-  for (i = 0 ; i < 2 * cvrp_num_cities ; ++i ){
-    printf("%d " , aoc_best[i]);
-    if (aoc_best[i] == 0 && aoc_best[i + 1] == 0){
-      printf("\n");
-      break;
-    }
-    if( i > 0 && aoc_best[i] == 0 )
-      printf("\n%d ", 0);
-  }
+  printf("%d %d %d %f %f\n", aoc_best_duration - cvrp_num_cities * cvrp_drop_time,
+         aoc_iteration_best_found,
+         aoc_total_iterations,
+         aoc_time_best_found,
+         aoc_total_time);
+//   printf("Cost: %d\n", aoc_best_duration - cvrp_num_cities * cvrp_drop_time);
+//   printf("Cost with drop time: %d\n", aoc_best_duration);
+//   printf("Iteration until best found: %d\n", aoc_iteration_best_found);
+//   printf("Total iterations: %d\n", aoc_total_iterations);
+//   printf("Time until best found: %f\n", aoc_time_best_found);
+//   printf("Total time elapsed: %f\n", aoc_total_time);
+//   printf("Routes:\n");
+//   int i,j;
+//   for (i = 0 ; i < 2 * cvrp_num_cities ; ++i ){
+//     printf("%d " , aoc_best[i]);
+//     if (aoc_best[i] == 0 && aoc_best[i + 1] == 0){
+//       printf("\n");
+//       break;
+//     }
+//     if( i > 0 && aoc_best[i] == 0 )
+//       printf("\n%d ", 0);
+//   }
 //   for ( i = 0 ; i <= 2 * cvrp_num_cities ; ++i )
 //     printf("%d ", aoc_best[i]);
 //   printf("\n");
-  verified_solution();
+  //verified_solution();
 }
 
 void verified_solution() {
@@ -658,7 +670,9 @@ void initialize_aoc(char ** args, int argc){
   aoc_best = (int*) malloc( ( cvrp_num_cities * 2 + 1 ) * sizeof(int));
   aoc_best_duration = INT_MAX;
   aoc_best_size = 0;
+#ifdef DEBUG
   print_aoc();
+#endif
 }
 
 int finish_not_improvement(){

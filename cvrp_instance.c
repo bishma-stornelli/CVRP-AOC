@@ -40,7 +40,9 @@ void cvrp_load_instance(char *cvrp_file_name) {
     fprintf(stderr,"No instance file specified, abort\n");
   }
   // assert(tsp_file != NULL);
+#ifdef DEBUG
   printf("\nconverting %s to tsp_file_name ... \n\n", cvrp_file_name);
+#endif
   
   fprintf(tsp_file, "NAME : %s\n",cvrp_file_name);
   fprintf(tsp_file, "TYPE : TSP\n");
