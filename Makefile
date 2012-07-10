@@ -12,7 +12,7 @@ TSP-TEST.V0.9/timer.o: TSP-TEST.V0.9/timer.h TSP-TEST.V0.9/timer.c
 	$(CC) -O -c TSP-TEST.V0.9/timer.c -o TSP-TEST.V0.9/timer.o -ansi -Wall
 
 TSP-TEST.V0.9/instance.o: TSP-TEST.V0.9/instance.h TSP-TEST.V0.9/instance.c
-	$(CC) -O -c TSP-TEST.V0.9/instance.c -o TSP-TEST.V0.9/instance.o -ansi -Wall
+	$(CC) -O -c TSP-TEST.V0.9/instance.c -o TSP-TEST.V0.9/instance.o  -Wall
 
 TSP-TEST.V0.9/utilities.o: TSP-TEST.V0.9/utilities.h TSP-TEST.V0.9/utilities.c
 	$(CC) -O -c TSP-TEST.V0.9/utilities.c -o TSP-TEST.V0.9/utilities.o -ansi -Wall

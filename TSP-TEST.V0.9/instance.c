@@ -247,39 +247,41 @@ void read_instance(const char *tsp_file_name)
 	exit(1);
     }
     assert(tsp_file != NULL);
+#ifdef DEBUG
     printf("\nreading tsp-file %s ... \n\n", tsp_file_name);
+#endif
 
     fscanf(tsp_file,"%s", buf);
     while ( strcmp("NODE_COORD_SECTION", buf) != 0 ) {
 	if ( strcmp("NAME", buf) == 0 ) {
 	    fscanf(tsp_file, "%s", buf);
-	    TRACE ( printf("%s ", buf); )
+	    // TRACE ( printf("%s ", buf); )
 	    fscanf(tsp_file, "%s", buf);
 	    strcpy(name, buf);
-	    TRACE ( printf("%s \n", name); )
+	    // TRACE ( printf("%s \n", name); )
 	    buf[0]=0;
 	}
 	else if ( strcmp("NAME:", buf) == 0 ) {
 	    fscanf(tsp_file, "%s", buf);
 	    strcpy(name, buf);
-	    TRACE ( printf("%s \n", name); )
+	    // TRACE ( printf("%s \n", name); )
 	    buf[0]=0;
 	}
 	else if ( strcmp("COMMENT", buf) == 0 ){
 	    fgets(buf, LINE_BUF_LEN, tsp_file);
-	    TRACE ( printf("%s", buf); )
+	    // TRACE ( printf("%s", buf); )
 	    buf[0]=0;
 	}
 	else if ( strcmp("COMMENT:", buf) == 0 ){
 	    fgets(buf, LINE_BUF_LEN, tsp_file);
-	    TRACE ( printf("%s", buf); )
+	    // TRACE ( printf("%s", buf); )
 	    buf[0]=0;
 	}
 	else if ( strcmp("TYPE", buf) == 0 ) {
 	    fscanf(tsp_file, "%s", buf);
-	    TRACE ( printf("%s ", buf); )
+	    // TRACE ( printf("%s ", buf); )
 	    fscanf(tsp_file, "%s", buf);
-	    TRACE ( printf("%s\n", buf); )
+	    // TRACE ( printf("%s\n", buf); )
 	    if( strcmp("TSP", buf) != 0 ) {
 		fprintf(stderr,"\n Not a TSP instance in TSPLIB format !!\n");
 		exit(1);
@@ -288,7 +290,7 @@ void read_instance(const char *tsp_file_name)
 	}
 	else if ( strcmp("TYPE:", buf) == 0 ) {
 	    fscanf(tsp_file, "%s", buf);
-	    TRACE ( printf("%s\n", buf); )
+	    // TRACE ( printf("%s\n", buf); )
 	    if( strcmp("TSP", buf) != 0 ) {
 		fprintf(stderr,"\n Not a TSP instance in TSPLIB format !!\n");
 		exit(1);
@@ -297,35 +299,35 @@ void read_instance(const char *tsp_file_name)
 	}
 	else if( strcmp("DIMENSION", buf) == 0 ){
 	    fscanf(tsp_file, "%s", buf);
-	    TRACE ( printf("%s ", buf); );
+	    // TRACE ( printf("%s ", buf); );
 	    fscanf(tsp_file, "%d", &ncities);
-	    TRACE ( printf("%d\n", ncities); );
+	    // TRACE ( printf("%d\n", ncities); );
 	    assert ( ncities > 2 && ncities < 6000);
 	    buf[0]=0;
 	}
 	else if ( strcmp("DIMENSION:", buf) == 0 ) {
 	    fscanf(tsp_file, "%d", &ncities);
-	    TRACE ( printf("%d\n", ncities); );
+	    // TRACE ( printf("%d\n", ncities); );
 	    assert ( ncities > 2 && ncities < 6000);
 	    buf[0]=0;
 	}
 	else if( strcmp("DISPLAY_DATA_TYPE", buf) == 0 ){
 	    fgets(buf, LINE_BUF_LEN, tsp_file);
-	    TRACE ( printf("%s", buf); );
+	    // TRACE ( printf("%s", buf); );
 	    buf[0]=0;
 	}
 	else if ( strcmp("DISPLAY_DATA_TYPE:", buf) == 0 ) {
 	    fgets(buf, LINE_BUF_LEN, tsp_file);
-	    TRACE ( printf("%s", buf); );
+	    // TRACE ( printf("%s", buf); );
 	    buf[0]=0;
 	}
 	else if( strcmp("EDGE_WEIGHT_TYPE", buf) == 0 ){
 	    buf[0]=0;
 	    fscanf(tsp_file, "%s", buf);
-	    TRACE ( printf("%s ", buf); );
+	    // TRACE ( printf("%s ", buf); );
 	    buf[0]=0;
 	    fscanf(tsp_file, "%s", buf);
-	    TRACE ( printf("%s\n", buf); );
+	    // TRACE ( printf("%s\n", buf); );
 	    if ( strcmp("EUC_2D", buf) == 0 ) {
 		distance = round_distance;
 	    }
@@ -348,7 +350,7 @@ void read_instance(const char *tsp_file_name)
 	       EUC_2D, CEIL_2D, GEO, or ATT. Everything else fails */
 	    buf[0]=0;
 	    fscanf(tsp_file, "%s", buf);
-	    TRACE ( printf("%s\n", buf); )
+	    // TRACE ( printf("%s\n", buf); )
 		printf("%s\n", buf);
 	    printf("%s\n", buf);
 	    if ( strcmp("EUC_2D", buf) == 0 ) {
@@ -376,7 +378,7 @@ void read_instance(const char *tsp_file_name)
 
 
     if( strcmp("NODE_COORD_SECTION", buf) == 0 ){
-	TRACE ( printf("found section contaning the node coordinates\n"); )
+	// TRACE ( printf("found section contaning the node coordinates\n"); )
 	    }
     else{
 	fprintf(stderr,"\n\nSome error ocurred finding start of coordinates from tsp file !!\n");
@@ -392,8 +394,8 @@ void read_instance(const char *tsp_file_name)
 	fscanf(tsp_file,"%d %lf %lf", &j, &xc[i], &yc[i] );
     }
 
-    TRACE ( printf("number of cities is %d\n",ncities); )
-    TRACE ( printf("\n... done\n"); )
+    // TRACE ( printf("number of cities is %d\n",ncities); )
+    // TRACE ( printf("\n... done\n"); )
 }
 
 /*************************************************************************/
