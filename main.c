@@ -12,7 +12,6 @@
 #include "aoc.h"
 
 
-
 void print_instance(){
   printf("cvrp_num_cities: %d\n" , cvrp_num_cities);
   printf("cvrp_max_route_duration: %d\n" , cvrp_max_route_duration);

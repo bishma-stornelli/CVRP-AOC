@@ -127,57 +127,6 @@ void getFeasibleComponents(const int * visited, int currentCustomer, int Rdurati
   }
 }
 
-// Tomado y adaptado de wikipedia
-// int colocar(const double **pheromones, int current_customer, int *v, int b, int t)
-// {
-//   int i;
-//   int pivote;
-//   double valor_pivote;
-//   int f_pivote;
-//   int temp;
-//   
-//   pivote = b;
-//   valor_pivote = pheromones[current_customer][v[pivote]];
-//   f_pivote = cvrp_distMat[current_customer][v[pivote]];
-//   for (i=b+1; i<=t; i++){
-//     if (pheromones[current_customer][v[i]] < valor_pivote ||
-//       (pheromones[current_customer][v[i]] == valor_pivote && cvrp_distMat[current_customer][v[i]] < f_pivote)){
-//       pivote++;
-//       temp=v[i];
-//       v[i]=v[pivote];
-//       v[pivote]=temp;
-//     }
-//   }
-//   temp=v[b];
-//   v[b]=v[pivote];
-//   v[pivote]=temp;
-//   return pivote;
-// }
-// 
-// // Tomado y adaptado de wikipedia
-// void Quicksort(const double **pheromones, int current_customer, int* v, int b, int t)
-// {
-//   int pivote;
-//   if(b < t){
-//     pivote=colocar(pheromones, current_customer, v, b, t);
-//     Quicksort(pheromones,current_customer, v, b, pivote-1);
-//     Quicksort(pheromones,current_customer, v, pivote+1, t);
-//   }
-// }
-/***************** GET COMPONENT USANDO QUICKSORT **********************/
-// int getComponent(int * components, int components_size, int current_customer, const double ** pheromones){
-// //   printf("Empezando a aplicar quicksort en los componentes: "); imprimir_arreglo(components, components_size);
-//   // Aplico quicksort para ordenar los componentes
-//   Quicksort(pheromones, current_customer, components, 0 , components_size - 1);
-// //   printf("Luego del quicksort los componentes quedaron asi: "); imprimir_arreglo(components, components_size);
-//   // Una vez arreglado elijo uno aleatorio de entre los primeros
-//   int temp = random_number(&seed) % (int)(1 + aoc_component_selection_rate * components_size);
-// //   printf("seed: %ld\n", seed);
-// //   printf("random_number: %d\n", temp);
-//   return components[ temp ];
-// }
-
-/***** GET COMPONENT USANDO LA FUNCION PROPUESTA EN HANDBOOK OF METAHEURISTICS *****/
 int getComponent(int * components, int components_size, int current_customer, const double ** pheromones){
   int l;
   double b = 0.0;
@@ -216,7 +165,7 @@ void updatePheromones(const int ** P, const int * durations, double ** pheromone
 //   if (worst_solution_duration == -1 ){
 //     worst_solution_duration = 0;
 //     for( i = 0 ; i < cvrp_num_cities ; ++i)
-//         worst_solution_duration += 2 * cvrp_distMat[0][i]; 
+//         worst_solution_duration += 2 * cvrp_distMat[0][i];
 //   }
   for( i = 0 ; i < aoc_total_ants ; ++i){
     for( j = 0 ; j < 2 * cvrp_num_cities ; ++j){
@@ -278,8 +227,11 @@ void elitistStrategy(double **p){
   }
 }
 
+/** map the tour in tour_route to variables used for the TSP library
+ * to compute the two_opt_best local search
+ */
 void map(int length_route, int * tour_route) {
-  
+
   ncities = length_route - 1;
   int **matrix;
   if((matrix = (int **)malloc(ncities * sizeof(int*))) == NULL ) {
@@ -293,22 +245,110 @@ void map(int length_route, int * tour_route) {
       printf("Out of memory, exit.");
       exit(1);
     }
-    for(j = 0; j < ncities; ++j) 
+    for(j = 0; j < ncities; ++j)
       matrix[i][j] = cvrp_distMat[tour_route[i]][tour_route[j]];
   }
-  free(distMat);
-  free(nnMat);
   distMat = matrix;
   nn_ls = MIN (ncities - 1, 40);
   nnMat = compute_NNLists();
 
 }
 
+int local_search(int length_route, int **P, int Psize, int indexOfLastRoute){
+  int * real_tour_route = (int*) malloc(length_route * sizeof(int));
+  int * tour_route = (int*) malloc(length_route * sizeof(int)); // 
+  int k;
+//   printf("Before two_opt_best: ");
+  for(k = 0; k < length_route; ++k) {
+//     printf("%d ", P[Psize][indexOfLastRoute + k]);
+    real_tour_route[k] = P[Psize][indexOfLastRoute + k];
+    tour_route[k] = k;
+  }
+//   printf("\n");
+  tour_route[length_route - 1] = 0;
+  map(length_route, real_tour_route);
+  int m,n;
+
+  // dlb is used for three_opt and two_opt_first. Not needed when using two_opt_best
+  dlb = calloc(ncities, sizeof(int));
+//   if(length_route > 12) {
+    two_opt_best(tour_route);
+//   } else {
+//     two_opt_best(tour_route); // three_opt_first(tour_route);
+//   }
+  
+  //               printf("\n");
+  //               printf("Tour after opt: ");
+  //               for(k = 0; k < length_route; ++k)
+  //              printf("%d ", tour_route[k]);
+  
+  
+  if(tour_route[0] == 0) {
+    for(k = 1; k < length_route - 1; ++k) {
+      P[Psize][indexOfLastRoute + k] = real_tour_route[tour_route[k]];
+    }
+  } else {
+    int depot_index = 0;
+    for(k = 1; k < length_route - 1; ++k) {
+      if(tour_route[k] == 0)
+        depot_index = k;
+    }
+    int l = 1;
+    for(k = depot_index + 1; k < length_route - 1; ++k) {
+      P[Psize][indexOfLastRoute + l] = real_tour_route[tour_route[k]];
+      ++l;
+    }
+    for(k = 0; k < depot_index; ++k) {
+      P[Psize][indexOfLastRoute + l] = real_tour_route[tour_route[k]];
+      ++l;
+    }
+  }
+  int Rduration = 0;
+
+//   printf("After two_opt_best: ");
+  for(k = 0; k < length_route - 1; ++k) {
+//     printf("%d ", P[Psize][indexOfLastRoute + k]);
+    Rduration += cvrp_distMat[P[Psize][indexOfLastRoute + k]][P[Psize][indexOfLastRoute + k + 1]];
+  }
+//   printf("\n");
+  Rduration += cvrp_drop_time * (length_route - 2);
+  
+  // printf("Route Duration After: %d\n", Rduration);
+  free(real_tour_route);
+  free(tour_route);
+  
+  free(distMat);
+  free(nnMat);
+  return Rduration;
+}
+
+void verifyVariables(int * P, int indexLastRoute, int currentPosition, int Rduration, int  Rdemand, int * visited){
+  int i;
+  int rdu = 0, rde = 0;
+  for ( i = indexLastRoute ; i < currentPosition - 1 ; ++i){
+    rdu += cvrp_distMat[P[i]][P[i+1]];
+    if(P[i] != 0 ){
+      rdu += cvrp_drop_time;
+      rde += cvrp_demand[P[i]];
+    }
+  }
+  if(P[i] != 0 ){
+    rdu += cvrp_drop_time;
+    rde += cvrp_demand[P[i]];
+  }
+  if( rdu != Rduration ){
+    printf("Duracion de la ruta esta mala\n");
+  }
+  if ( rde != Rdemand ){
+    printf("Demanda de la ruta esta mala\n");
+  }
+}
+
 void run_aoc_metaheuristic(){
-  
-  
+
+
   // Inicializo variables locales
-  
+
   // Taking the initial time
   gettimeofday(&t_ini, 0);
   int max_solution_size = (2 * cvrp_num_cities + 1 ) * sizeof(int);
@@ -339,7 +379,7 @@ void run_aoc_metaheuristic(){
 
 //   printf("La matriz de feromonas es: \n");
 //   imprimir_matriz_reales(pheromones,1+cvrp_num_cities, 1 + cvrp_num_cities );
-  
+
   do {
     // Inicializo todo para construir todo de nuevo
     //memset(Rnumber, 0, aoc_total_ants * sizeof(int));
@@ -350,11 +390,12 @@ void run_aoc_metaheuristic(){
       int Sduration = 0, Rduration = 0 , Rdemand = 0;
       P[Psize][0] = 0; // La solucion empieza en el deposito
       memset(visited, 0 , ( 1 + cvrp_num_cities) * sizeof(int));
-      
+
       while (1){
 //         printf("La solucion %d construida hasta ahora es: ", Psize); imprimir_arreglo(P[Psize], currentPosition);
         // Deberia considerar no solo el arco de llegada al nuevo componente sino tambien el regreso al deposito
         // Y ademas no deberia regresar 0 si la posicion actual es 0 (el deposito)
+        verifyVariables(P[Psize], indexOfLastRoute, currentPosition, Rduration, Rdemand, visited);
         getFeasibleComponents(visited, P[Psize][currentPosition - 1], Rduration, Rdemand, C, &Csize);
 #ifdef DEBUG
         printf("Los componentes factibles son: "); imprimir_arreglo( C, Csize);
@@ -370,102 +411,33 @@ void run_aoc_metaheuristic(){
 #ifdef DEBUG
           printf("El componente elegido es: %d\n", component);
 #endif
-          
+
           P[Psize][currentPosition] = component;
           visited[component] = 1;
-          
+
           if( component == 0 ) {
             // Si el componente es el deposito, acabo de terminar de construir
             // una ruta y puedo aplicarle el 3-opt
             // Falta verificar que el tamano de la ruta sea el minimo requerido para 3-opt
-            /*int * tour = &(P[Psize][indexOfLastRoute]); // PUEDE HABER UN GRAN BUG EN ESTA LINEA
-            ncities = currentPosition - indexOfLastRoute; // Actualizo ncities para aplicar el three_opt_first*/
-            
+//             int * tour = &(P[Psize][indexOfLastRoute]); // PUEDE HABER UN GRAN BUG EN ESTA LINEA
+//             ncities = currentPosition - indexOfLastRoute; // Actualizo ncities para aplicar el three_opt_first
+
             int length_route = currentPosition - indexOfLastRoute + 1;
-	    /*
-	    printf("\nindexOfLastRoute: %d",indexOfLastRoute);
-	    printf("\ncurrentPosition:  %d",currentPosition);
-	    printf("\nlength_route: %d",length_route);
-	    */
-	    if(length_route > 5) {
-	      
-	      int * real_tour_route = (int*) malloc(length_route * sizeof(int));
-	      int * tour_route = (int*) malloc(length_route * sizeof(int));
-	      int k;
-	      for(k = 0; k < length_route; ++k) {
-		real_tour_route[k] = P[Psize][indexOfLastRoute + k];
-		tour_route[k] = k;
-	      }
-	      tour_route[length_route - 1] = 0;
-	      map(length_route, real_tour_route);
-	      int m,n;
-	      
-	      /*
-	      printf("\nReal Tour before opt: ");
-	      for(k = 0; k < length_route; ++k)
-		printf("%d ", real_tour_route[k]);
-	      printf("\nTour before opt: ");
-	      for(k = 0; k < length_route; ++k)
-		printf("%d ", tour_route[k]);
-	      */
-	      
-	      dlb = calloc(ncities, sizeof(int));
-	      if(length_route > 12) {
-		two_opt_best(tour_route);
-	      } else {
-		two_opt_best(tour_route); // three_opt_first(tour_route); 
-	      }
-	      /*
-	      printf("\n");
-	      printf("Tour after opt: ");
-	      for(k = 0; k < length_route; ++k)
-		printf("%d ", tour_route[k]);
-	      */
-
-	      if(tour_route[0] == 0) {
-		for(k = 1; k < length_route - 1; ++k) {
-		  P[Psize][indexOfLastRoute + k] = real_tour_route[tour_route[k]];
-		}
-	      } else {
-		int depot_index = 0;
-		for(k = 1; k < length_route - 1; ++k) {
-		  if(tour_route[k] == 0)
-		    depot_index = k;
-		}
-		int l = 1;
-		for(k = depot_index + 1; k < length_route - 1; ++k) {
-		  P[Psize][indexOfLastRoute + l] = real_tour_route[tour_route[k]];
-		  ++l;
-		}
-		for(k = 0; k < depot_index; ++k) {
-		  P[Psize][indexOfLastRoute + l] = real_tour_route[tour_route[k]];
-		  ++l;
-		}
-
-	      }
-	      /*
-	      printf("\nReal Tour after opt: ");
-	      for(k = 0; k < length_route; ++k)
-		printf("%d ",P[Psize][indexOfLastRoute + k]);
-	      
-	      printf("\nRoute Duration Before: %d\n", Rduration + cvrp_distMat[P[Psize][currentPosition - 1]][component]);
-	      */
-	      Rduration = 0;  
-
-	      for(k = 0; k < length_route - 1; ++k) {
-		Rduration += cvrp_distMat[P[Psize][indexOfLastRoute + k]][P[Psize][indexOfLastRoute + k + 1]];
-	      }
-	      // printf("Route Duration After: %d\n", Rduration);
-	      free(real_tour_route);
-	      free(tour_route);
-
-	    } else {	    
-	      /*Sduration += calculateTourDuration(tour) + ncities * dropTime;*/
-	      Rduration += cvrp_distMat[P[Psize][currentPosition - 1]][component];
-	      //++Rnumber[Psize];
-	    }
-	    Sduration += Rduration;
-	    indexOfLastRoute = currentPosition;
+            
+//             printf("\nindexOfLastRoute: %d",indexOfLastRoute);
+//             printf("\ncurrentPosition:  %d",currentPosition);
+//             printf("\nlength_route: %d",length_route);
+            
+            if(length_route > 5) {
+                Rduration = local_search(length_route, P, Psize, indexOfLastRoute);
+            } else {
+      //         Sduration += calculateTourDuration(tour) + ncities * dropTime;
+              Rduration += cvrp_distMat[P[Psize][currentPosition - 1]][component];
+              //++Rnumber[Psize];
+            }
+      
+            Sduration += Rduration;
+            indexOfLastRoute = currentPosition;
             Rduration = 0;
             Rdemand = 0;
           } else {
@@ -514,52 +486,59 @@ void print_results(){
          aoc_total_iterations,
          aoc_time_best_found,
          aoc_total_time);
-//   printf("Cost: %d\n", aoc_best_duration - cvrp_num_cities * cvrp_drop_time);
-//   printf("Cost with drop time: %d\n", aoc_best_duration);
-//   printf("Iteration until best found: %d\n", aoc_iteration_best_found);
-//   printf("Total iterations: %d\n", aoc_total_iterations);
-//   printf("Time until best found: %f\n", aoc_time_best_found);
-//   printf("Total time elapsed: %f\n", aoc_total_time);
-//   printf("Routes:\n");
-//   int i,j;
-//   for (i = 0 ; i < 2 * cvrp_num_cities ; ++i ){
-//     printf("%d " , aoc_best[i]);
-//     if (aoc_best[i] == 0 && aoc_best[i + 1] == 0){
-//       printf("\n");
-//       break;
-//     }
-//     if( i > 0 && aoc_best[i] == 0 )
-//       printf("\n%d ", 0);
-//   }
+  /*printf("Cost: %d\n", aoc_best_duration - cvrp_num_cities * cvrp_drop_time);
+  printf("Cost with drop time: %d\n", aoc_best_duration);
+  printf("Iteration until best found: %d\n", aoc_iteration_best_found);
+  printf("Total iterations: %d\n", aoc_total_iterations);
+  printf("Time until best found: %f\n", aoc_time_best_found);
+  printf("Total time elapsed: %f\n", aoc_total_time);
+  printf("Routes:\n");
+  int i,j;
+  double real_cost = 0.0;
+  for (i = 0 ; i < 2 * cvrp_num_cities ; ++i ){
+    printf("%d " , aoc_best[i]);
+    if (aoc_best[i] == 0 && aoc_best[i + 1] == 0){
+      printf("\n");
+      break;
+    }
+    if( i > 0 && aoc_best[i] == 0 )
+      printf("\n%d ", 0);
+    real_cost += cvrp_real_distMat[aoc_best[i]][aoc_best[i+1]];
+  }
 //   for ( i = 0 ; i <= 2 * cvrp_num_cities ; ++i )
 //     printf("%d ", aoc_best[i]);
 //   printf("\n");
-  //verified_solution();
+  printf("Costo en reales: %f\n", real_cost);*/
+  verified_solution();
 }
 
 void verified_solution() {
-  
-  int totalDuration = 0;
-  int routeDuration = 0;
+
+  double totalDuration = 0;
+  double routeDuration = 0;
   int routeDemand = 0;
   int routeNum = 1;
   int edgeCost = 0;
   int numClient = 1;
   int i;
-  
+  int * vis = calloc(cvrp_num_cities + 1, sizeof(int));
+
   for(i = 0; i < 2*cvrp_num_cities; ++i) {
-    
+    if (aoc_best[i] != 0 && vis[aoc_best[i]] == 1){
+      printf("Hay un cliente repetido\n");
+    }
+    vis[aoc_best[i]] = 1;
     if (aoc_best[i] == 0 && aoc_best[i + 1] == 0) {
       break;
     }
-    edgeCost = cvrp_distMat[aoc_best[i]][aoc_best[i + 1]];
+    edgeCost = cvrp_real_distMat[aoc_best[i]][aoc_best[i + 1]];
     routeDuration += edgeCost;
     if(aoc_best[i] != 0) {
       ++numClient;
       routeDuration += cvrp_drop_time;
       routeDemand += cvrp_demand[aoc_best[i]];
     }
-    
+
     if(aoc_best[i+1] == 0) {
 //       printf("the duration for route %d is %d\n",routeNum,routeDuration);
 //       printf("the demand for route %d is %d\n",routeNum,routeDemand);
@@ -574,20 +553,25 @@ void verified_solution() {
     }
 
   }
-  
-  if(totalDuration != aoc_best_duration) {
-    printf("the tour duration doesnt correspond to the computed duration\n");
+  for(i = 0; i <= cvrp_num_cities; ++i) {
+    if (vis[i] != 1){
+      printf("La solucion no incluye a la ciudad %d\n", i);
+    }
   }
-    
+  free(vis);
+//   if(totalDuration != aoc_best_duration) {
+//     printf("the tour duration doesnt correspond to the computed duration\n");
+//   }
+
 }
 
 void print_usage(){
   printf("Opciones:\n\n");
-  
+
   printf("\t-a <total_ants>\n");
   printf("\t\tEspecifica el numero total de soluciones que se construyen por iteracion.\n");
   printf("\t\tEl numero por defecto es igual al numero de ciudades.\n\n");
-  
+
   printf("\t-e <evaporation_rate>\n");
   printf("\t\tEspecifica el factor de evaporacion de las feromonas.\n");
   printf("\t\tDebe estar entre [0.0, 1.0]. Por defecto: 0.2\n\n");
@@ -599,7 +583,7 @@ void print_usage(){
   printf("\t-p <pheromone_amplification>\n");
   printf("\t\tEspecifica el factor de amplificacion de las feromonas usadas para seleccionar los componentes.\n");
   printf("\t\tDebe ser >= 0. Por defecto: 1.0\n\n");
-  
+
   printf("\t-t <finish_function> <finish_param>\n");
   printf("\t\tEspecifica la funcion para terminar la metaheuristicas. Los posibles valores son:\n");
   printf("\t\t\timprovement en cuyo caso finish_param es el numero de iteraciones que pasan sin mejorar la solucion\n");
@@ -607,7 +591,7 @@ void print_usage(){
   printf("\t\t\ttime en cuyo caso finish_param es el numero de segundos maximo que debe correr la solucion\n");
   printf("\t\tCuando no se especifica, la funcion usada por defecto es por tiempo con 60 segundos.\n");
   exit(1);
-  
+
 }
 
 void initialize_aoc(char ** args, int argc){
@@ -643,7 +627,7 @@ void initialize_aoc(char ** args, int argc){
         print_usage();
       }
       finish_param = atoi(args[++i]);
-    } 
+    }
   }
 
   if ( aoc_evaporation_rate == 0 ||
@@ -655,14 +639,14 @@ void initialize_aoc(char ** args, int argc){
        (aoc_pheromone_amplification != -1 && aoc_pheromone_amplification < 0.0)) {
     print_usage();
   }
-  if ( aoc_evaporation_rate == -1 ) aoc_evaporation_rate = 0.2;
-  if ( aoc_total_ants == -1 ) aoc_total_ants = cvrp_num_cities;
+  if ( aoc_evaporation_rate == -1 ) aoc_evaporation_rate = 0.3;
+  if ( aoc_total_ants == -1 ) aoc_total_ants = 20;
   if ( finish_param == -1 ) {
     finish_function = finish_time;
     finish_param = 60;
   }
-  if ( aoc_heuristic_amplification == -1 ) aoc_heuristic_amplification = 1.0;
-  if ( aoc_pheromone_amplification == -1 ) aoc_pheromone_amplification = 1.0;
+  if ( aoc_heuristic_amplification == -1 ) aoc_heuristic_amplification = 5.0;
+  if ( aoc_pheromone_amplification == -1 ) aoc_pheromone_amplification = 0.5;
   aoc_iteration_best_found = 0;
   aoc_total_iterations = 0;
   aoc_time_best_found = 0.0;;

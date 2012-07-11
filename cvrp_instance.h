@@ -23,5 +23,7 @@ extern int cvrp_drop_time;
 // Carga la instancia a partir del archivo cvrp_file_name
 extern void cvrp_load_instance(char *cvrp_file_name);
 
+extern double ** cvrp_real_distMat;
+
 
 #endif
